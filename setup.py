@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 from setuptools import setup, find_packages, find_namespace_packages
-from sqlmt.version import VERSION
+from mt.sql.version import VERSION
 
 setup(
-    name='sqlmt',
+    name='mtsql',
     version=VERSION,
     description="Extra Python modules to deal with the interaction between pandas dataframes and remote SQL servers, for Minh-Tri Pham",
     author=["Minh-Tri Pham"],
@@ -16,4 +16,9 @@ setup(
         # 'mysql', # for mysql access
         'pandasmt>=0.1.0',
     ],
+    url='https://github.com/inteplus/mtsql',
+    project_urls={
+        'Documentation': 'https://mtdoc.readthedocs.io/en/latest/mt.sql/mt.sql.html',
+        'Source Code': 'https://github.com/inteplus/mtsql',
+    }
 )

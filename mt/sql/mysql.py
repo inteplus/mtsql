@@ -9,6 +9,9 @@ import mt.pandas.csv as _mc
 from .base import *
 
 
+__all__ = ['list_views', 'rename_table', 'list_columns_ext', 'list_columns', 'rename_column', 'drop_column']
+
+
 # MT-TODO: any function below this line needs testing
 
 
