@@ -14,7 +14,7 @@ setup(
         'tzlocal',  # for getting the local timezone
         'psycopg2-binary',  # for psql access
         # 'mysql', # for mysql access
-        'pandasmt>=0.1.0',
+        'mtpandas>=0.2.1',
     ],
     url='https://github.com/inteplus/mtsql',
     project_urls={
