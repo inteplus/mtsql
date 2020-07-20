@@ -1225,7 +1225,7 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
     return local_df
 
 
-def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=False, columns=['*'], schema=None, cond=None, bg_write_csv=False, max_records_per_query=10240, nb_trials=3, logger=None):
+def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=False, columns=['*'], schema=None, cond=None, bg_write_csv=False, max_records_per_query=None, nb_trials=3, logger=None, raise_exception_upon_mismatch=True):
     '''Reads and updates a local CSV table from a PostgreSQL table by updating only rows which have been changed.
 
     Parameters
@@ -1254,6 +1254,8 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
         number of read_sql() trials
     logger: logging.Logger or None
         logger for debugging
+    raise_exception_upon_mismatch : bool
+        whether to raise a RuntimeError upon mismatching the number of hashes and the number of records
 
     Returns
     -------
@@ -1331,8 +1333,11 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
                 if logger:
                     logger.debug("New dataframe:\n{}".format(str(new_df)))
                     logger.debug("Hash dataframe:\n{}".format(str(new_md5_df)))
-                raise RuntimeError("Something must have gone wrong. Number of hashes {} != number of records {}.".format(
-                    len(new_md5_df), len(new_df)))
+                msg = "Something must have gone wrong. Number of hashes {} != number of records {}.".format(len(new_md5_df), len(new_df))
+                if raise_exception_upon_mismatch:
+                    raise RuntimeError(msg)
+                elif logger:
+                    logger.warn(msg)
         else:
             new_df = None  # nothing new
 
