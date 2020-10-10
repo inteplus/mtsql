@@ -4,9 +4,10 @@ import pandas as _pd
 import pandas.util as _pu
 import numpy as _np
 import re as _re
-import mt.base.path as _p
 import psycopg2 as _ps
 import sqlalchemy.exc as _se
+from tqdm import trange  # nice progress bar
+import mt.base.path as _p
 from mt.base.bg_invoke import BgInvoke
 from mt.base.logging import dummy_scope
 import mt.pandas.csv as _mc
@@ -14,7 +15,8 @@ import mt.pandas.csv as _mc
 from .base import *
 
 
-__all__ = ['pg_get_locked_transactions', 'pg_cancel_backend', 'pg_cancel_all_backends', 'read_sql', 'read_sql_query', 'read_sql_table', 'indices', 'compliance_check', 'as_column_name', 'to_sql', 'exec_sql', 'rename_schema', 'list_views', 'list_matviews', 'list_frames', 'list_all_frames', 'get_frame_length', 'get_frame_dependencies', 'get_view_sql_code', 'rename_table', 'drop_table', 'rename_view', 'drop_view', 'rename_matview', 'drop_matview', 'frame_exists', 'drop_frame', 'list_columns_ext', 'list_columns', 'list_primary_columns_ext', 'list_primary_columns', 'rename_column', 'drop_column', 'comparesync_table', 'readsync_table', 'writesync_table']
+__all__ = ['pg_get_locked_transactions', 'pg_cancel_backend', 'pg_cancel_all_backends', 'read_sql', 'read_sql_query', 'read_sql_table', 'indices', 'compliance_check', 'as_column_name', 'to_sql', 'exec_sql', 'rename_schema', 'list_views', 'list_matviews', 'list_frames', 'list_all_frames', 'get_frame_length', 'get_frame_dependencies',
+           'get_view_sql_code', 'rename_table', 'drop_table', 'rename_view', 'drop_view', 'rename_matview', 'drop_matview', 'frame_exists', 'drop_frame', 'list_columns_ext', 'list_columns', 'list_primary_columns_ext', 'list_primary_columns', 'rename_column', 'drop_column', 'comparesync_table', 'readsync_table', 'writesync_table']
 
 
 # ----- debugging functions -----
@@ -232,7 +234,8 @@ def as_column_name(s):
     s2 = _re.sub('[^\w]', '_', s)
     s2 = s2.lower()
     if not _re.match('^[a-z]', s2):
-        raise ValueError("The first letter of the input is not an alphabet letter: '{}'->'{}'".format(s, s2))
+        raise ValueError(
+            "The first letter of the input is not an alphabet letter: '{}'->'{}'".format(s, s2))
 
     return s2
 
@@ -1147,7 +1150,8 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
             return local_df
 
         if len(local_df) < 128:  # a small dataset
-            to_sql(local_df, table_name, conn, schema=schema, if_exists='replace', nb_trials=nb_trials, logger=logger)
+            to_sql(local_df, table_name, conn, schema=schema,
+                   if_exists='replace', nb_trials=nb_trials, logger=logger)
             return local_df
 
         if len(same_keys) == 0:  # no record in the remote table
@@ -1162,6 +1166,7 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
 
         # write those records as new
         if len(local_only_keys) > 0:
+            with trange(len(local_only_keys)) as progress_bar:
             df = local_df[local_df.index.isin(local_only_keys)]
 
             while len(df) > record_cap:
@@ -1172,10 +1177,13 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
                         "Inserting {} records, {} remaining...".format(len(df2), len(df)))
 
                 start_time = _pd.Timestamp.utcnow()
-                to_sql(df2, table_name, conn, schema=schema, if_exists='append', nb_trials=nb_trials, logger=logger)
+                to_sql(df2, table_name, conn, schema=schema,
+                       if_exists='append', nb_trials=nb_trials, logger=logger)
                 # elapsed time is in seconds
                 elapsed_time = (_pd.Timestamp.utcnow() -
                                 start_time).total_seconds()
+
+                progress_bar.update(len(df2))
 
                 if max_records_per_query is None:
                     if elapsed_time > 300:  # too slow
@@ -1185,7 +1193,9 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
 
             if logger:
                 logger.debug("Inserting {} records.".format(len(df)))
-            to_sql(df, table_name, conn, schema=schema, if_exists='append', nb_trials=nb_trials, logger=logger)
+            to_sql(df, table_name, conn, schema=schema,
+                   if_exists='append', nb_trials=nb_trials, logger=logger)
+            progress_bar.update(len(df))
 
         # remove redundant remote records
         id_list = diff_keys + remote_only_keys
@@ -1193,11 +1203,13 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
             if logger:
                 logger.debug("Removing {} keys.".format(len(id_list)))
             id_list = ",".join(str(x) for x in id_list)
-            query_str = "DELETE FROM {} WHERE {} IN ({});".format(frame_sql_str, id_name, id_list)
+            query_str = "DELETE FROM {} WHERE {} IN ({});".format(
+                frame_sql_str, id_name, id_list)
             exec_sql(query_str, conn, nb_trials=nb_trials, logger=logger)
 
         # insert records that need modification
         if len(diff_keys) > 0:
+            with trange(len(diff_keys)) as progress_bar:
             df = local_df[local_df.index.isin(diff_keys)]
 
             while len(df) > record_cap:
@@ -1208,10 +1220,13 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
                         "Modifying {} records, {} remaining...".format(len(df2), len(df)))
 
                 start_time = _pd.Timestamp.utcnow()
-                to_sql(df2, table_name, conn, schema=schema, if_exists='append', nb_trials=nb_trials, logger=logger)
+                to_sql(df2, table_name, conn, schema=schema,
+                       if_exists='append', nb_trials=nb_trials, logger=logger)
                 # elapsed time is in seconds
                 elapsed_time = (_pd.Timestamp.utcnow() -
                                 start_time).total_seconds()
+
+                progress_bar.update(len(df2))
 
                 if max_records_per_query is None:
                     if elapsed_time > 300:  # too slow
@@ -1220,7 +1235,9 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
                         record_cap *= 2
             if logger:
                 logger.debug("Modifying {} records.".format(len(df)))
-            to_sql(df, table_name, conn, schema=schema, if_exists='append', nb_trials=nb_trials, logger=logger)
+            to_sql(df, table_name, conn, schema=schema,
+                   if_exists='append', nb_trials=nb_trials, logger=logger)
+            progress_bar.update(len(df))
 
     return local_df
 
@@ -1287,6 +1304,7 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
         # read remote records
         id_list = diff_keys + remote_only_keys
         if len(id_list) > 0:
+            with trange(len(id_list)) as progress_bar:
             column_list = ','.join((table_name+'.'+x for x in columns))
 
             new_md5_df = remote_md5_df[remote_md5_df.index.isin(id_list)]
@@ -1319,6 +1337,8 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
                 elapsed_time = (_pd.Timestamp.utcnow() -
                                 start_time).total_seconds()
 
+                progress_bar.update(len(id_list2))
+
                 if max_records_per_query is None:
                     if elapsed_time > 300:  # too slow
                         record_cap = max(1, record_cap//2)
@@ -1333,7 +1353,8 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
                 if logger:
                     logger.debug("New dataframe:\n{}".format(str(new_df)))
                     logger.debug("Hash dataframe:\n{}".format(str(new_md5_df)))
-                msg = "Something must have gone wrong. Number of hashes {} != number of records {}.".format(len(new_md5_df), len(new_df))
+                msg = "Something must have gone wrong. Number of hashes {} != number of records {}.".format(
+                    len(new_md5_df), len(new_df))
                 if raise_exception_upon_mismatch:
                     raise RuntimeError(msg)
                 elif logger:

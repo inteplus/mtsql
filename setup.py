@@ -12,6 +12,7 @@ setup(
     install_requires=[
         'sqlalchemy',  # for psql access
         'tzlocal',  # for getting the local timezone
+        'tqdm',  # for a nice progress bar
         'psycopg2-binary',  # for psql access
         # 'mysql', # for mysql access
         'mtpandas>=0.2.1',
