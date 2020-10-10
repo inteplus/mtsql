@@ -6,7 +6,7 @@ import numpy as _np
 import re as _re
 import psycopg2 as _ps
 import sqlalchemy.exc as _se
-from tqdm import trange  # nice progress bar
+from tqdm import tqdm  # nice progress bar
 import mt.base.path as _p
 from mt.base.bg_invoke import BgInvoke
 from mt.base.logging import dummy_scope
@@ -1166,36 +1166,34 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
 
         # write those records as new
         if len(local_only_keys) > 0:
-            with trange(len(local_only_keys)) as progress_bar:
-            df = local_df[local_df.index.isin(local_only_keys)]
-
-            while len(df) > record_cap:
-                df2 = df[:record_cap]
-                df = df[record_cap:]
-                if logger:
-                    logger.debug(
-                        "Inserting {} records, {} remaining...".format(len(df2), len(df)))
-
-                start_time = _pd.Timestamp.utcnow()
-                to_sql(df2, table_name, conn, schema=schema,
-                       if_exists='append', nb_trials=nb_trials, logger=logger)
-                # elapsed time is in seconds
-                elapsed_time = (_pd.Timestamp.utcnow() -
-                                start_time).total_seconds()
-
-                progress_bar.update(len(df2))
-
-                if max_records_per_query is None:
-                    if elapsed_time > 300:  # too slow
-                        record_cap = max(1, record_cap//2)
-                    else:  # too fast
-                        record_cap *= 2
-
             if logger:
-                logger.debug("Inserting {} records.".format(len(df)))
-            to_sql(df, table_name, conn, schema=schema,
-                   if_exists='append', nb_trials=nb_trials, logger=logger)
-            progress_bar.update(len(df))
+                logger.debug("Inserting {} records...".format(
+                    len(local_only_keys)))
+            with tqdm(total=len(local_only_keys)) as progress_bar:
+                df = local_df[local_df.index.isin(local_only_keys)]
+
+                while len(df) > record_cap:
+                    df2 = df[:record_cap]
+                    df = df[record_cap:]
+
+                    start_time = _pd.Timestamp.utcnow()
+                    to_sql(df2, table_name, conn, schema=schema,
+                           if_exists='append', nb_trials=nb_trials, logger=logger)
+                    # elapsed time is in seconds
+                    elapsed_time = (_pd.Timestamp.utcnow() -
+                                    start_time).total_seconds()
+
+                    progress_bar.update(len(df2))
+
+                    if max_records_per_query is None:
+                        if elapsed_time > 300:  # too slow
+                            record_cap = max(1, record_cap//2)
+                        else:  # too fast
+                            record_cap *= 2
+
+                to_sql(df, table_name, conn, schema=schema,
+                       if_exists='append', nb_trials=nb_trials, logger=logger)
+                progress_bar.update(len(df))
 
         # remove redundant remote records
         id_list = diff_keys + remote_only_keys
@@ -1209,35 +1207,33 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
 
         # insert records that need modification
         if len(diff_keys) > 0:
-            with trange(len(diff_keys)) as progress_bar:
-            df = local_df[local_df.index.isin(diff_keys)]
-
-            while len(df) > record_cap:
-                df2 = df[:record_cap]
-                df = df[record_cap:]
-                if logger:
-                    logger.debug(
-                        "Modifying {} records, {} remaining...".format(len(df2), len(df)))
-
-                start_time = _pd.Timestamp.utcnow()
-                to_sql(df2, table_name, conn, schema=schema,
-                       if_exists='append', nb_trials=nb_trials, logger=logger)
-                # elapsed time is in seconds
-                elapsed_time = (_pd.Timestamp.utcnow() -
-                                start_time).total_seconds()
-
-                progress_bar.update(len(df2))
-
-                if max_records_per_query is None:
-                    if elapsed_time > 300:  # too slow
-                        record_cap = max(1, record_cap//2)
-                    else:  # too fast
-                        record_cap *= 2
             if logger:
-                logger.debug("Modifying {} records.".format(len(df)))
-            to_sql(df, table_name, conn, schema=schema,
-                   if_exists='append', nb_trials=nb_trials, logger=logger)
-            progress_bar.update(len(df))
+                logger.debug("Modifying {} records...".format(len(diff_keys)))
+            with tqdm(total=len(diff_keys)) as progress_bar:
+                df = local_df[local_df.index.isin(diff_keys)]
+
+                while len(df) > record_cap:
+                    df2 = df[:record_cap]
+                    df = df[record_cap:]
+                    if logger:
+
+                    start_time = _pd.Timestamp.utcnow()
+                    to_sql(df2, table_name, conn, schema=schema,
+                           if_exists='append', nb_trials=nb_trials, logger=logger)
+                    # elapsed time is in seconds
+                    elapsed_time = (_pd.Timestamp.utcnow() -
+                                    start_time).total_seconds()
+
+                    progress_bar.update(len(df2))
+
+                    if max_records_per_query is None:
+                        if elapsed_time > 300:  # too slow
+                            record_cap = max(1, record_cap//2)
+                        else:  # too fast
+                            record_cap *= 2
+                to_sql(df, table_name, conn, schema=schema,
+                       if_exists='append', nb_trials=nb_trials, logger=logger)
+                progress_bar.update(len(df))
 
     return local_df
 
@@ -1304,46 +1300,48 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
         # read remote records
         id_list = diff_keys + remote_only_keys
         if len(id_list) > 0:
-            with trange(len(id_list)) as progress_bar:
-            column_list = ','.join((table_name+'.'+x for x in columns))
+            if logger:
+                logger.debug("Fetching {} records...".format(len(id_list)))
+            with tqdm(total=len(id_list)) as progress_bar:
+                column_list = ','.join((table_name+'.'+x for x in columns))
 
-            new_md5_df = remote_md5_df[remote_md5_df.index.isin(id_list)]
+                new_md5_df = remote_md5_df[remote_md5_df.index.isin(id_list)]
 
-            record_cap = 128 if max_records_per_query is None else max_records_per_query
+                record_cap = 128 if max_records_per_query is None else max_records_per_query
 
-            new_dfs = []
-            while len(id_list) > 0:
-                if len(id_list) > record_cap:
-                    id_list2 = id_list[:record_cap]
-                    id_list = id_list[record_cap:]
-                else:
-                    id_list2 = id_list
-                    id_list = []
-                if logger:
-                    logger.debug("Fetching {} records with remaining {} records...".format(
-                        len(id_list2), len(id_list)))
-                query_str = "("+",".join((str(id) for id in id_list2))+")"
-                query_str = "select {} from {} where {} in {}".format(
-                    column_list, frame_sql_str, id_name, query_str)
-                if cond is not None:
-                    query_str += " and " + cond
-                # if logger:
-                    #logger.debug("  using query '{}',".format(query_str))
+                new_dfs = []
+                while len(id_list) > 0:
+                    if len(id_list) > record_cap:
+                        id_list2 = id_list[:record_cap]
+                        id_list = id_list[record_cap:]
+                    else:
+                        id_list2 = id_list
+                        id_list = []
+                    if logger:
+                        logger.debug("Fetching {} records with remaining {} records...".format(
+                            len(id_list2), len(id_list)))
+                    query_str = "("+",".join((str(id) for id in id_list2))+")"
+                    query_str = "select {} from {} where {} in {}".format(
+                        column_list, frame_sql_str, id_name, query_str)
+                    if cond is not None:
+                        query_str += " and " + cond
+                    # if logger:
+                        #logger.debug("  using query '{}',".format(query_str))
 
-                start_time = _pd.Timestamp.utcnow()
-                new_dfs.append(read_sql(query_str, conn, index_col=id_name,
-                                        set_index_after=set_index_after, nb_trials=nb_trials, logger=logger))
-                # elapsed time is in seconds
-                elapsed_time = (_pd.Timestamp.utcnow() -
-                                start_time).total_seconds()
+                    start_time = _pd.Timestamp.utcnow()
+                    new_dfs.append(read_sql(query_str, conn, index_col=id_name,
+                                            set_index_after=set_index_after, nb_trials=nb_trials, logger=logger))
+                    # elapsed time is in seconds
+                    elapsed_time = (_pd.Timestamp.utcnow() -
+                                    start_time).total_seconds()
 
-                progress_bar.update(len(id_list2))
+                    progress_bar.update(len(id_list2))
 
-                if max_records_per_query is None:
-                    if elapsed_time > 300:  # too slow
-                        record_cap = max(1, record_cap//2)
-                    else:  # too fast
-                        record_cap *= 2
+                    if max_records_per_query is None:
+                        if elapsed_time > 300:  # too slow
+                            record_cap = max(1, record_cap//2)
+                        else:  # too fast
+                            record_cap *= 2
 
             new_df = _pd.concat(new_dfs)
             if not 'hash' in new_df.columns:
