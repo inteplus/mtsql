@@ -1215,7 +1215,6 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
                 while len(df) > record_cap:
                     df2 = df[:record_cap]
                     df = df[record_cap:]
-                    if logger:
 
                     start_time = _pd.Timestamp.utcnow()
                     to_sql(df2, table_name, conn, schema=schema,
@@ -1317,9 +1316,6 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
                     else:
                         id_list2 = id_list
                         id_list = []
-                    if logger:
-                        logger.debug("Fetching {} records with remaining {} records...".format(
-                            len(id_list2), len(id_list)))
                     query_str = "("+",".join((str(id) for id in id_list2))+")"
                     query_str = "select {} from {} where {} in {}".format(
                         column_list, frame_sql_str, id_name, query_str)
