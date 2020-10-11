@@ -1074,9 +1074,9 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
                     else:
                         qsql = "{} where {}>={} and {}<{}".format(
                             query_str, id_name, offset-record_cap, id_name, offset)
-                    if logger:
-                        logger.debug("offset={} record_cap={}".format(
-                            offset, record_cap))
+                    #if logger:
+                        #logger.debug("offset={} record_cap={}".format(
+                            #offset, record_cap))
 
                     start_time = _pd.Timestamp.utcnow()
                     df = read_sql(qsql, conn, index_col=id_name,
