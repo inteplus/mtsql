@@ -50,7 +50,7 @@ def pg_get_locked_transactions(conn, schema=None):
         query_str = """
             SELECT
                 t1.*, t2.relname, t3.nspname
-              FROM pg_locks t1 
+              FROM pg_locks t1
                 INNER JOIN pg_class t2 ON t1.relation=t2.oid
                 INNER JOIN pg_namespace t3 ON t2.relnamespace=t3.oid
               WHERE NOT t2.relname ILIKE 'pg_%%'
@@ -502,22 +502,22 @@ def get_frame_dependencies(frame_name, conn, schema=None, nb_trials=3, logger=No
     '''
     query_str = """
         SELECT dependent_ns.nspname as dependent_schema
-        , dependent_view.relname as dependent_view 
+        , dependent_view.relname as dependent_view
         , source_ns.nspname as source_schema
         , source_table.relname as source_table
         , pg_attribute.attname as column_name
-        FROM pg_depend 
-        JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid 
-        JOIN pg_class as dependent_view ON pg_rewrite.ev_class = dependent_view.oid 
-        JOIN pg_class as source_table ON pg_depend.refobjid = source_table.oid 
-        JOIN pg_attribute ON pg_depend.refobjid = pg_attribute.attrelid 
-            AND pg_depend.refobjsubid = pg_attribute.attnum 
+        FROM pg_depend
+        JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid
+        JOIN pg_class as dependent_view ON pg_rewrite.ev_class = dependent_view.oid
+        JOIN pg_class as source_table ON pg_depend.refobjid = source_table.oid
+        JOIN pg_attribute ON pg_depend.refobjid = pg_attribute.attrelid
+            AND pg_depend.refobjsubid = pg_attribute.attnum
         JOIN pg_namespace dependent_ns ON dependent_ns.oid = dependent_view.relnamespace
         JOIN pg_namespace source_ns ON source_ns.oid = source_table.relnamespace
-        WHERE 
+        WHERE
         source_ns.nspname = '{}'
         AND source_table.relname = '{}'
-        AND pg_attribute.attnum > 0 
+        AND pg_attribute.attnum > 0
         ORDER BY 1,2;
     """.format('public' if schema is None else schema, frame_name)
     return read_sql_query(query_str, conn, nb_trials=nb_trials, logger=logger)
@@ -945,7 +945,7 @@ def drop_column(table_name, column_name, conn, schema=None, nb_trials=3, logger=
 # ----- functions to synchronise between a local table and a remote table -----
 
 
-def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=False, columns=['*'], schema=None, cond=None, reading_mode=True, nb_trials=3, logger=None):
+def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=False, columns=['*'], schema=None, max_records_per_query=None, cond=None, reading_mode=True, nb_trials=3, logger=None):
     '''Compares a local CSV table with a remote PostgreSQL to find out which rows are the same or different.
 
     Parameters
@@ -964,6 +964,8 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
         list of column names the function will read from, ignoring the remaining columns
     schema: str
         schema name, None means using the default one
+    max_records_per_query: int or None
+        maximum number of records to be updated in each SQL query. If None, this will be dynamic to make sure each query runs about 5 minute.
     cond: str
         additional condition in selecting rows from the PostgreSQL table
     reading_mode: bool
@@ -1044,12 +1046,67 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
                 query_str = "select {}, md5({}) as hash from {}".format(
                     id_name, text, frame_sql_str)
 
-            if cond is not None:
-                query_str += " where " + cond
-            # if logger:
-                #logger.debug("Probing the remote table using hash query '{}'...".format(query_str))
-            remote_md5_df = read_sql(query_str, conn, index_col=id_name,
-                                     set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
+            with logger.scoped_debug("Range of '{}'".format(id_name), curly=False) if logger else dummy_scope:
+                qsql = "SELECT min({}) AS val FROM ({}) ct_t0".format(
+                    id_name, query_str)
+                df = read_sql(qsql, conn, nb_trials=nb_trials, logger=logger)
+                min_id = df['val'][0]
+                if logger:
+                    logger.debug("Min: {}".format(min_id))
+                qsql = "SELECT max({}) AS val FROM ({}) ct_t0".format(
+                    id_name, query_str)
+                df = read_sql(qsql, conn, nb_trials=nb_trials, logger=logger)
+                max_id = df['val'][0]
+                if logger:
+                    logger.debug("Max: {}".format(max_id))
+
+            remaining = max_id+1-min_id
+            offset = min_id
+            remote_md5_dfs = []
+            record_cap = 128
+            if logger:
+                logger.debug("Obtaining remote keys and hashes:")
+            with tqdm(total=remaining, unit='key values') as progress_bar:
+                while remaining > record_cap:
+                    if cond:
+                        qsql = "{} where {} and {}>={} and {}<{}".format(
+                            query_str, cond, id_name, offset, id_name, offset+record_cap)
+                    else:
+                        qsql = "{} where {}>={} and {}<{}".format(
+                            query_str, id_name, offset, id_name, offset+record_cap)
+
+                    start_time = _pd.Timestamp.utcnow()
+                    df = read_sql(qsql, conn, index_col=id_name,
+                                  set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
+                    remote_md5_dfs.append(df)
+                    # elapsed time is in seconds
+                    elapsed_time = (_pd.Timestamp.utcnow() -
+                                    start_time).total_seconds()
+
+                    progress_bar.update(record_cap)
+                    offset += record_cap
+                    remaining -= record_cap
+
+                    if max_records_per_query is None:
+                        if elapsed_time > 300:  # too slow
+                            record_cap = max(1, record_cap//2)
+                        else:  # too fast
+                            record_cap *= 2
+
+                if cond:
+                    qsql = "{} where {} and {}>={} and {}<{}".format(
+                        query_str, cond, id_name, offset, id_name, offset+remaining)
+                else:
+                    qsql = "{} where {}>={} and {}<{}".format(
+                        query_str, id_name, offset, id_name, offset+remaining)
+
+                df = read_sql(qsql, conn, index_col=id_name,
+                              set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
+                remote_md5_dfs.append(df)
+                remote_md5_df = _pd.concat(remote_md5_dfs, sort=False)
+
+                progress_bar.update(remaining)
+
             remote_dup_keys = remote_md5_df[remote_md5_df.index.duplicated(
             )].index.drop_duplicates().tolist()
             if logger:
@@ -1128,7 +1185,7 @@ def writesync_table(conn, csv_filepath, table_name, id_name, schema=None, max_re
     frame_sql_str = frame_sql(table_name, schema=schema)
     with logger.scoped_debug("Writing table: local '{}' -> remote '{}'".format(csv_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
         local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys = comparesync_table(
-            conn_ro, csv_filepath, table_name, id_name, columns=['*'], schema=schema, cond=None, reading_mode=False, nb_trials=nb_trials, logger=None)
+            conn_ro, csv_filepath, table_name, id_name, columns=['*'], schema=schema, max_records_per_query=max_records_per_query, cond=None, reading_mode=False, nb_trials=nb_trials, logger=logger)
 
         # nothing changed, really!
         if len(diff_keys) == 0 and len(local_only_keys) == 0 and len(remote_only_keys) == 0:
@@ -1283,7 +1340,7 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
     frame_sql_str = frame_sql(table_name, schema=schema)
     with logger.scoped_debug("Reading table: local '{}' <- remote '{}'".format(csv_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
         local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys = comparesync_table(
-            conn, csv_filepath, table_name, id_name, columns=columns, schema=schema, cond=cond, nb_trials=nb_trials, logger=None)
+            conn, csv_filepath, table_name, id_name, columns=columns, schema=schema, max_records_per_query=max_records_per_query, cond=cond, nb_trials=nb_trials, logger=logger)
 
         # nothing changed, really!
         if len(diff_keys) == 0 and len(local_only_keys) == 0 and len(remote_only_keys) == 0:
@@ -1322,7 +1379,7 @@ def readsync_table(conn, csv_filepath, table_name, id_name, set_index_after=Fals
                     if cond is not None:
                         query_str += " and " + cond
                     # if logger:
-                        #logger.debug("  using query '{}',".format(query_str))
+                        # logger.debug("  using query '{}',".format(query_str))
 
                     start_time = _pd.Timestamp.utcnow()
                     new_dfs.append(read_sql(query_str, conn, index_col=id_name,
