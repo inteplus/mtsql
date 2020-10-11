@@ -1061,7 +1061,7 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
                     logger.debug("Max: {}".format(max_id))
 
             remaining = max_id+1-min_id
-            offset = min_id
+            offset = max_id
             remote_md5_dfs = []
             record_cap = 128
             if logger:
@@ -1070,10 +1070,10 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
                 while remaining > record_cap:
                     if cond:
                         qsql = "{} where {} and {}>={} and {}<{}".format(
-                            query_str, cond, id_name, offset, id_name, offset+record_cap)
+                            query_str, cond, id_name, offset-record_cap, id_name, offset)
                     else:
                         qsql = "{} where {}>={} and {}<{}".format(
-                            query_str, id_name, offset, id_name, offset+record_cap)
+                            query_str, id_name, offset-record_cap, id_name, offset)
 
                     start_time = _pd.Timestamp.utcnow()
                     df = read_sql(qsql, conn, index_col=id_name,
@@ -1095,10 +1095,10 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
 
                 if cond:
                     qsql = "{} where {} and {}>={} and {}<{}".format(
-                        query_str, cond, id_name, offset, id_name, offset+remaining)
+                        query_str, cond, id_name, min_id, id_name, offset)
                 else:
                     qsql = "{} where {}>={} and {}<{}".format(
-                        query_str, id_name, offset, id_name, offset+remaining)
+                        query_str, id_name, min_id, id_name, offset)
 
                 df = read_sql(qsql, conn, index_col=id_name,
                               set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
