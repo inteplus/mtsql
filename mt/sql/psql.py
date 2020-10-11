@@ -1066,7 +1066,7 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, set_index_after=F
             record_cap = 128
             if logger:
                 logger.debug("Obtaining remote keys and hashes:")
-            with tqdm(total=remaining, unit='key values') as progress_bar:
+            with tqdm(total=remaining, unit='val') as progress_bar:
                 while remaining > record_cap:
                     if cond:
                         qsql = "{} where {} and {}>={} and {}<{}".format(
