@@ -1043,11 +1043,11 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash',
                 text = 'textin(record_out(('+column_list+')))'
 
             if hash_name in list_columns(table_name, conn, schema=schema, nb_trials=nb_trials, logger=logger):
-                query_str = "select {}, hash from {}".format(
-                    id_name, frame_sql_str)
+                query_str = "select {}, {} from {}".format(
+                    id_name, hash_name, frame_sql_str)
             else:
-                query_str = "select {}, md5({}) as hash from {}".format(
-                    id_name, text, frame_sql_str)
+                query_str = "select {}, md5({}) as {} from {}".format(
+                    id_name, hash_name, text, frame_sql_str)
 
             with logger.scoped_debug("Range of '{}'".format(id_name), curly=False) if logger else dummy_scope:
                 qsql = "SELECT min({}) AS val FROM ({}) ct_t0".format(
