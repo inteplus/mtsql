@@ -1137,7 +1137,7 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash',
         diff_keys = local_dup_keys + remote_dup_keys
         # remove all cases with duplicated keys
         df = df[~df.index.isin(diff_keys)]
-        local_only_keys = df[df[hash_name+hash_name+'_remote'].isnull()].index.tolist()
+        local_only_keys = df[df[hash_name+'_remote'].isnull()].index.tolist()
         df = df[df[hash_name+'_remote'].notnull()]
         remote_only_keys = df[df[hash_name+'_local'].isnull()].index.tolist()
         df = df[df[hash_name+'_local'].notnull()]
