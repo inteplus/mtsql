@@ -1427,7 +1427,8 @@ def readsync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', se
             local2_df = local_df[local_df.index.isin(same_keys)]
             df = local2_df if new_df is None else _pd.concat(
                 [local2_df, new_df], sort=True)
-        df.index = df.index.astype(new_md5_df.index.dtype)
+        if new_df:
+            df.index = df.index.astype(new_md5_df.index.dtype)
         df = df.groupby(df.index).first().sort_index()
 
         # write back
