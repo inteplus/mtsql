@@ -1353,7 +1353,7 @@ def readsync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', se
             if logger:
                 logger.debug(
                     "Both tables are the same and of length {}.".format(len(same_keys)))
-            return local_df, None if bg_write_csv else local_df
+            return (local_df, None) if bg_write_csv else local_df
 
         if logger:
             logger.debug("Keys: {} to retain, {} to delete, {} to update, {} to read as new.".format(
