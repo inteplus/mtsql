@@ -10,7 +10,7 @@ from tqdm import tqdm  # nice progress bar
 import mt.base.path as _p
 from mt.base.bg_invoke import BgInvoke
 from mt.base.logging import dummy_scope
-import mt.pandas.csv as _mc
+from mt.pandas.convert import dfload, dfsave
 
 from .base import *
 
@@ -1008,7 +1008,7 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash',
         # local_df
         if _p.exists(csv_filepath):
             try:
-                local_df = _mc.read_csv(csv_filepath, index_col=id_name)
+                local_df = dfload(csv_filepath, index_col=id_name)
                 local_dup_keys = local_df[local_df.index.duplicated(
                 )].index.drop_duplicates().tolist()
                 if len(local_df) == 0:
@@ -1435,8 +1435,8 @@ def readsync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', se
         if logger:
             logger.debug("Saving all {} records to file...".format(len(df)))
         if bg_write_csv is True:
-            bg = BgInvoke(_mc.to_csv, df, csv_filepath, index=True)
+            bg = BgInvoke(dfsave, df, csv_filepath, index=True)
             return df, bg
         else:
-            _mc.to_csv(df, csv_filepath, index=True)
+            dfsave(df, csv_filepath, index=True)
             return df
