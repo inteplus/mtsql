@@ -945,15 +945,15 @@ def drop_column(table_name, column_name, conn, schema=None, nb_trials=3, logger=
 # ----- functions to synchronise between a local table and a remote table -----
 
 
-def comparesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema=None, max_records_per_query=None, cond=None, reading_mode=True, nb_trials=3, logger=None):
+def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema=None, max_records_per_query=None, cond=None, reading_mode=True, nb_trials=3, logger=None):
     '''Compares a local CSV table with a remote PostgreSQL to find out which rows are the same or different.
 
     Parameters
     ----------
     conn: sqlalchemy connectible
         connection to the PostgreSQL database
-    csv_filepath: path
-        path to the local CSV file
+    df_filepath: path
+        path to the local '.csv', '.csv.zip' or '.parquet' file
     table_name: str
         table name
     id_name: str
@@ -1000,15 +1000,15 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash',
     '''
     frame_sql_str = frame_sql(table_name, schema=schema)
 
-    with logger.scoped_debug("Comparing table: local '{}' <-> remote '{}'".format(csv_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
+    with logger.scoped_debug("Comparing table: local '{}' <-> remote '{}'".format(df_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
         # make sure the folder containing the CSV file exists
-        data_dir = _p.dirname(csv_filepath)
+        data_dir = _p.dirname(df_filepath)
         _p.make_dirs(data_dir)
 
         # local_df
-        if _p.exists(csv_filepath):
+        if _p.exists(df_filepath):
             try:
-                local_df = dfload(csv_filepath, index_col=id_name)
+                local_df = dfload(df_filepath, index_col=id_name)
                 local_dup_keys = local_df[local_df.index.duplicated(
                 )].index.drop_duplicates().tolist()
                 if len(local_df) == 0:
@@ -1149,15 +1149,15 @@ def comparesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash',
         return local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys
 
 
-def writesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', schema=None, max_records_per_query=None, conn_ro=None, nb_trials=3, logger=None):
+def writesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', schema=None, max_records_per_query=None, conn_ro=None, nb_trials=3, logger=None):
     '''Writes and updates a remote PostgreSQL table from a local CSV table by updating only rows which have been changed.
 
     Parameters
     ----------
     conn: sqlalchemy connectible
         connection to the PostgreSQL database
-    csv_filepath: path
-        path to the local CSV file
+    df_filepath: path
+        path to the local '.csv', '.csv.zip' or '.parquet' file
     table_name: str
         table name
     id_name: str
@@ -1191,9 +1191,9 @@ def writesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', s
     if conn_ro is None:
         conn_ro = conn
     frame_sql_str = frame_sql(table_name, schema=schema)
-    with logger.scoped_debug("Writing table: local '{}' -> remote '{}'".format(csv_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
+    with logger.scoped_debug("Writing table: local '{}' -> remote '{}'".format(df_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
         local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys = comparesync_table(
-            conn_ro, csv_filepath, table_name, id_name, hash_name=hash_name, columns=['*'], schema=schema, max_records_per_query=max_records_per_query, cond=None, reading_mode=False, nb_trials=nb_trials, logger=logger)
+            conn_ro, df_filepath, table_name, id_name, hash_name=hash_name, columns=['*'], schema=schema, max_records_per_query=max_records_per_query, cond=None, reading_mode=False, nb_trials=nb_trials, logger=logger)
 
         # nothing changed, really!
         if len(diff_keys) == 0 and len(local_only_keys) == 0 and len(remote_only_keys) == 0:
@@ -1302,15 +1302,15 @@ def writesync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', s
     return local_df
 
 
-def readsync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema=None, cond=None, bg_write_csv=False, max_records_per_query=None, nb_trials=3, logger=None, raise_exception_upon_mismatch=True):
+def readsync_table(conn, df_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema=None, cond=None, bg_write_csv=False, max_records_per_query=None, nb_trials=3, logger=None, raise_exception_upon_mismatch=True):
     '''Reads and updates a local CSV table from a PostgreSQL table by updating only rows which have been changed.
 
     Parameters
     ----------
     conn: sqlalchemy connectible
         connection to the PostgreSQL database
-    csv_filepath: path
-        path to the local CSV file
+    df_filepath: path
+        path to the local '.csv', '.csv.zip' or '.parquet' file
     table_name: str
         table name
     id_name: str
@@ -1344,9 +1344,9 @@ def readsync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', se
         If bg_write_csv is True, this represents the background thread for writing the updated CSV file. If no background thread is needed, None is returned.
     '''
     frame_sql_str = frame_sql(table_name, schema=schema)
-    with logger.scoped_debug("Reading table: local '{}' <- remote '{}'".format(csv_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
+    with logger.scoped_debug("Reading table: local '{}' <- remote '{}'".format(df_filepath, frame_sql_str), curly=False) if logger else dummy_scope:
         local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys = comparesync_table(
-            conn, csv_filepath, table_name, id_name, hash_name=hash_name, columns=columns, schema=schema, max_records_per_query=max_records_per_query, cond=cond, nb_trials=nb_trials, logger=logger)
+            conn, df_filepath, table_name, id_name, hash_name=hash_name, columns=columns, schema=schema, max_records_per_query=max_records_per_query, cond=cond, nb_trials=nb_trials, logger=logger)
 
         # nothing changed, really!
         if len(diff_keys) == 0 and len(local_only_keys) == 0 and len(remote_only_keys) == 0:
@@ -1435,8 +1435,8 @@ def readsync_table(conn, csv_filepath, table_name, id_name, hash_name='hash', se
         if logger:
             logger.debug("Saving all {} records to file...".format(len(df)))
         if bg_write_csv is True:
-            bg = BgInvoke(dfsave, df, csv_filepath, index=True)
+            bg = BgInvoke(dfsave, df, df_filepath, index=True)
             return df, bg
         else:
-            dfsave(df, csv_filepath, index=True)
+            dfsave(df, df_filepath, index=True)
             return df
