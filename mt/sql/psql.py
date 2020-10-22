@@ -1008,7 +1008,10 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
         # local_df
         if _p.exists(df_filepath):
             try:
-                local_df = dfload(df_filepath, index_col=id_name)
+                if df_filepath.endswith('.parquet'):
+                    local_df = dfload(df_filepath)
+                else:
+                    local_df = dfload(df_filepath, index_col=id_name)
                 local_dup_keys = local_df[local_df.index.duplicated(
                 )].index.drop_duplicates().tolist()
                 if len(local_df) == 0:
