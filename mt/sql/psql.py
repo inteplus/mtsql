@@ -115,7 +115,7 @@ def run_func(func, *args, nb_trials=3, logger=None, **kwargs):
     for x in range(nb_trials):
         try:
             return func(*args, **kwargs)
-        except _se.ProgrammingError as e:
+        except (_se.ProgrammingError, _se.IntegrityError) as e:
             raise
         except (_se.DatabaseError, _se.OperationalError, _ps.OperationalError) as e:
             if logger:
