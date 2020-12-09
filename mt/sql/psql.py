@@ -997,8 +997,6 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
     The hash field of each table will be used to store and compare the hash values. If it does not exist, it will be generated automatically.
 
     The id_name field must uniquely identify each record in both tables. Duplicated keys in either table will be treated as diff_keys, so that hopefully next sync will fix them.
-
-    2020/12/09: the id_name must be an integer field.
     '''
     frame_sql_str = frame_sql(table_name, schema=schema)
 
@@ -1014,7 +1012,6 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                     local_df = dfload(df_filepath, show_progress=True)
                 else:
                     local_df = dfload(df_filepath, index_col=id_name, show_progress=True)
-                local_df.index = local_df.index.astype(int)
                 local_dup_keys = local_df[local_df.index.duplicated(
                 )].index.drop_duplicates().tolist()
                 if len(local_df) == 0:
@@ -1049,10 +1046,10 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                 text = 'textin(record_out(('+column_list+')))'
 
             if hash_name in list_columns(table_name, conn, schema=schema, nb_trials=nb_trials, logger=logger):
-                query_str = "select {}::int, {} from {}".format(
+                query_str = "select {}, {} from {}".format(
                     id_name, hash_name, frame_sql_str)
             else:
-                query_str = "select {}::int, md5({}) as {} from {}".format(
+                query_str = "select {}, md5({}) as {} from {}".format(
                     id_name, hash_name, text, frame_sql_str)
 
             with logger.scoped_debug("Range of '{}'".format(id_name), curly=False) if logger else dummy_scope:
@@ -1090,7 +1087,6 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                     start_time = _pd.Timestamp.utcnow()
                     df = read_sql(qsql, conn, index_col=id_name,
                                   set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
-                    df.index = df.index.astype(int) # convert to int
                     remote_md5_dfs.append(df)
                     # elapsed time is in seconds
                     elapsed_time = (_pd.Timestamp.utcnow() -
@@ -1115,7 +1111,6 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
 
                 df = read_sql(qsql, conn, index_col=id_name,
                               set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
-                df.index = df.index.astype(int) # convert to int
                 remote_md5_dfs.append(df)
                 remote_md5_df = _pd.concat(remote_md5_dfs, sort=False)
 
