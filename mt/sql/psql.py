@@ -1070,7 +1070,7 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                     logger.debug("Max: {}".format(max_id))
 
             remaining = max_id+1-min_id
-            offset = max_id
+            offset = max_id+1
             remote_md5_dfs = []
             record_cap = 128
             if logger:
