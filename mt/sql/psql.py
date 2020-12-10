@@ -1050,7 +1050,7 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                     id_name, hash_name, frame_sql_str)
             else:
                 query_str = "select {}, md5({}) as {} from {}".format(
-                    id_name, hash_name, text, frame_sql_str)
+                    id_name, text, hash_name, frame_sql_str)
 
             with logger.scoped_debug("Range of '{}'".format(id_name), curly=False) if logger else dummy_scope:
                 qsql = "SELECT min({}) AS val FROM ({}) ct_t0".format(
