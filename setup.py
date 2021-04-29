@@ -15,6 +15,7 @@ setup(
         'tqdm',  # for a nice progress bar
         'psycopg2-binary',  # for psql access
         # 'mysql', # for mysql access
+        'mtbase>=1.2.10',
         'mtpandas>=0.3.0', # to have dfload and dfsave
     ],
     url='https://github.com/inteplus/mtsql',
