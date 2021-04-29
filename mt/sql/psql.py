@@ -9,7 +9,7 @@ import sqlalchemy.exc as _se
 from tqdm import tqdm  # nice progress bar
 import mt.base.path as _p
 from mt.base.bg_invoke import BgInvoke
-from mt.base.logging import dummy_scope
+from mt.base.with_utils import dummy_scope
 from mt.pandas.convert import dfload, dfsave
 
 from .base import *
