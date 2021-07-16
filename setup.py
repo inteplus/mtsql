@@ -16,7 +16,7 @@ setup(
         'psycopg2-binary',  # for psql access
         # 'mysql', # for mysql access
         'mtbase>=1.4.6',
-        'mtpandas>=0.47', # to have dfload and dfsave
+        'mtpandas>=0.4.7', # to have dfload and dfsave
     ],
     url='https://github.com/inteplus/mtsql',
     project_urls={
