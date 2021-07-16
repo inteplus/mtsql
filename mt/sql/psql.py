@@ -1,22 +1,19 @@
 '''Useful modules for accessing PostgreSQL'''
 
-import pandas as _pd
-import pandas.util as _pu
-import numpy as _np
 import re as _re
 import psycopg2 as _ps
 import sqlalchemy.exc as _se
 from tqdm import tqdm  # nice progress bar
+
+from mt import pd, np
 import mt.base.path as _p
 from mt.base.bg_invoke import BgInvoke
 from mt.base.with_utils import dummy_scope
-from mt.pandas.convert import dfload, dfsave
 
 from .base import *
 
 
-__all__ = ['pg_get_locked_transactions', 'pg_cancel_backend', 'pg_cancel_all_backends', 'read_sql', 'read_sql_query', 'read_sql_table', 'indices', 'compliance_check', 'as_column_name', 'to_sql', 'exec_sql', 'rename_schema', 'list_views', 'list_matviews', 'list_frames', 'list_all_frames', 'get_frame_length', 'get_frame_dependencies',
-           'get_view_sql_code', 'rename_table', 'drop_table', 'rename_view', 'drop_view', 'rename_matview', 'drop_matview', 'frame_exists', 'drop_frame', 'list_columns_ext', 'list_columns', 'list_primary_columns_ext', 'list_primary_columns', 'rename_column', 'drop_column', 'comparesync_table', 'readsync_table', 'writesync_table']
+__all__ = ['pg_get_locked_transactions', 'pg_cancel_backend', 'pg_cancel_all_backends', 'indices', 'compliance_check', 'as_column_name', 'rename_schema', 'list_views', 'list_matviews', 'list_frames', 'list_all_frames', 'get_frame_length', 'get_frame_dependencies', 'get_view_sql_code', 'rename_table', 'drop_table', 'rename_view', 'drop_view', 'rename_matview', 'drop_matview', 'frame_exists', 'drop_frame', 'list_columns_ext', 'list_columns', 'list_primary_columns_ext', 'list_primary_columns', 'rename_column', 'drop_column', 'comparesync_table', 'readsync_table', 'writesync_table']
 
 
 # ----- debugging functions -----
@@ -56,7 +53,7 @@ def pg_get_locked_transactions(conn, schema=None):
               WHERE NOT t2.relname ILIKE 'pg_%%'
                 AND t3.nspname = '{}'
             ;""".format(schema)
-    return _pd.read_sql(query_str, conn)
+    return pd.read_sql(query_str, conn)
 
 
 def pg_cancel_backend(conn, pid):
@@ -70,7 +67,7 @@ def pg_cancel_backend(conn, pid):
         the backend pid to be cancelled
     '''
     query_str = "SELECT pg_cancel_backend('{}');".format(pid)
-    return _pd.read_sql(query_str, conn)
+    return pd.read_sql(query_str, conn)
 
 
 def pg_cancel_all_backends(conn, schema=None, logger=None):
@@ -94,107 +91,6 @@ def pg_cancel_all_backends(conn, schema=None, logger=None):
 
 
 # ----- functions dealing with sql queries to overcome OperationalError -----
-
-
-def run_func(func, *args, nb_trials=3, logger=None, **kwargs):
-    '''Attempt to run a function a number of times to overcome OperationalError exceptions.
-
-    Parameters
-    ----------
-    func: function
-        function to be invoked
-    args: sequence
-        arguments to be passed to the function
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
-    kwargs: dict
-        keyword arguments to be passed to the function
-    '''
-    for x in range(nb_trials):
-        try:
-            return func(*args, **kwargs)
-        except (_se.ProgrammingError, _se.IntegrityError) as e:
-            raise
-        except (_se.DatabaseError, _se.OperationalError, _ps.OperationalError) as e:
-            if logger:
-                with logger.scoped_warn("Ignored an exception raised by failed attempt {}/{} to execute `{}.{}()`".format(x+1, nb_trials, func.__module__, func.__name__)):
-                    logger.warn_last_exception()
-    raise RuntimeError("Attempted {} times to execute `{}.{}()` but failed.".format(
-        nb_trials, func.__module__, func.__name__))
-
-
-def read_sql(sql, conn, index_col=None, set_index_after=False, nb_trials=3, logger=None, **kwargs):
-    """Read an SQL query with a number of trials to overcome OperationalError.
-
-    Parameters
-    ----------
-    index_col: string or list of strings, optional, default: None
-        Column(s) to set as index(MultiIndex). See pandas.read_sql().
-    set_index_after: bool
-        whether to set index specified by index_col via the pandas.read_sql() function or after the function has been invoked
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
-    kwargs: dict
-        other keyword arguments to be passed directly to pandas.read_sql()
-
-    See Also
-    --------
-    pandas.read_sql
-    """
-    if index_col is None or not set_index_after:
-        return run_func(_pd.read_sql, sql, conn, index_col=index_col, nb_trials=nb_trials, logger=logger, **kwargs)
-    df = run_func(_pd.read_sql, sql, conn,
-                  nb_trials=nb_trials, logger=logger, **kwargs)
-    return df.set_index(index_col, drop=True)
-
-
-def read_sql_query(sql, conn, index_col=None, set_index_after=False, nb_trials=3, logger=None, **kwargs):
-    """Read an SQL query with a number of trials to overcome OperationalError.
-
-    Parameters
-    ----------
-    index_col: string or list of strings, optional, default: None
-        Column(s) to set as index(MultiIndex). See pandas.read_sql_query().
-    set_index_after: bool
-        whether to set index specified by index_col via the pandas.read_sql_query() function or after the function has been invoked
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
-    kwargs: dict
-        other keyword arguments to be passed directly to pandas.read_sql_query()
-
-    See Also
-    --------
-    pandas.read_sql_query
-    """
-    if index_col is None or not set_index_after:
-        return run_func(_pd.read_sql_query, sql, conn, index_col=index_col, nb_trials=nb_trials, logger=logger, **kwargs)
-    df = run_func(_pd.read_sql_query, sql, conn,
-                  nb_trials=nb_trials, logger=logger, **kwargs)
-    return df.set_index(index_col, drop=True)
-
-
-def read_sql_table(table_name, conn, nb_trials=3, logger=None, **kwargs):
-    """Read an SQL table with a number of trials to overcome OperationalError.
-
-    Parameters
-    ----------
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
-
-    See Also
-    --------
-    pandas.read_sql_table
-
-    """
-    return run_func(_pd.read_sql_table, table_name, conn, nb_trials=nb_trials, logger=logger, **kwargs)
 
 
 def indices(df):
@@ -238,102 +134,6 @@ def as_column_name(s):
             "The first letter of the input is not an alphabet letter: '{}'->'{}'".format(s, s2))
 
     return s2
-
-
-def to_sql(df, name, conn, schema=None, if_exists='fail', nb_trials=3, logger=None, **kwargs):
-    """Writes records stored in a DataFrame to an SQL database, with a number of trials to overcome OperationalError.
-
-    Parameters
-    ----------
-    df: pandas.DataFrame
-        dataframe to be sent to the server
-    conn: sqlalchemy.engine.Engine or sqlite3.Connection
-        the connection engine
-    schema: string, optional
-        Specify the schema. If None, use default schema.
-    if_exists: str
-        what to do when the table exists. Beside all options available from pandas.to_sql(), a new option called 'gently_replace' is introduced, in which it will avoid dropping the table by trying to delete all entries and then inserting new entries. But it will only do so if the remote table contains exactly all the columns that the local dataframe has, and vice-versa.
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
-
-    Raises
-    ------
-    sqlalchemy.exc.ProgrammingError if the local and remote frames do not have the same structure
-
-    Notes
-    -----
-    The original pandas.DataFrame.to_sql() function does not turn any index into a primary key in PSQL. This function attempts to fix that problem. It takes as input a PSQL-compliant dataframe (see `compliance_check()`). It ignores any input `index` or `index_label` keyword. Instead, it considers 2 cases. If the dataframe's has an index or indices, then the tuple of all indices is turned into the primary key. If not, there is no primary key and no index is uploaded.
-
-    See Also
-    --------
-    pandas.DataFrame.to_sql()
-
-    """
-
-    if kwargs:
-        if 'index' in kwargs:
-            raise ValueError(
-                "The `mt.sql.psql.to_sql()` function does not accept `index` as a keyword.")
-        if 'index_label' in kwargs:
-            raise ValueError(
-                "This `mt.sql.psql.to_sql()` function does not accept `index_label` as a keyword.")
-
-    compliance_check(df)
-    frame_sql_str = frame_sql(name, schema=schema)
-
-    # if the remote frame does not exist, force `if_exists` to 'replace'
-    if not frame_exists(name, conn, schema=schema, nb_trials=nb_trials, logger=logger):
-        if_exists = 'replace'
-    local_indices = indices(df)
-
-    # not 'gently replace' case
-    if if_exists != 'gently_replace':
-        if not local_indices:
-            return run_func(df.to_sql, name, conn, schema=schema, if_exists=if_exists, index=False, index_label=None, nb_trials=nb_trials, logger=logger, **kwargs)
-        retval = run_func(df.to_sql, name, conn, schema=schema, if_exists=if_exists,
-                          index=True, index_label=None, nb_trials=nb_trials, logger=logger, **kwargs)
-        if if_exists == 'replace':
-            exec_sql("ALTER TABLE {} ADD PRIMARY KEY ({});".format(frame_sql_str, ','.join(
-                local_indices)), conn, nb_trials=nb_trials, logger=logger)
-        return retval
-
-    # the remaining section is the 'gently replace' case
-
-    # remote indices
-    remote_indices = list_primary_columns(
-        name, conn, schema=schema, nb_trials=nb_trials, logger=logger)
-    if local_indices != remote_indices:
-        raise _se.ProgrammingError("SELECT * FROM {} LIMIT 1;".format(frame_sql_str), remote_indices,
-                                   "Remote index '{}' differs from local index '{}'.".format(remote_indices, local_indices))
-
-    # remote columns
-    remote_columns = list_columns(
-        name, conn, schema=schema, nb_trials=nb_trials, logger=logger)
-    remote_columns = [x for x in remote_columns if not x in remote_indices]
-    columns = list(df.columns)
-    if columns != remote_columns:
-        raise _se.ProgrammingError("SELECT * FROM {} LIMIT 1;".format(frame_sql_str), "matching non-primary fields",
-                                   "Local columns '{}' differ from remote columns '{}'.".format(columns, remote_columns))
-
-    exec_sql("DELETE FROM {};".format(frame_sql_str),
-             conn, nb_trials=nb_trials, logger=logger)
-    return run_func(df.to_sql, name, conn, schema=schema, if_exists='append', index=bool(local_indices), index_label=None, nb_trials=nb_trials, logger=logger, **kwargs)
-
-
-def exec_sql(sql, conn, *args, nb_trials=3, logger=None, **kwargs):
-    """Execute an SQL query with a number of trials to overcome OperationalError. See sqlalchemy.Engine.execute() for more details.
-
-    Parameters
-    ----------
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
-
-    """
-    return run_func(conn.execute, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs)
 
 
 # ----- simple functions -----
@@ -440,7 +240,7 @@ def list_frames(conn, schema=None, nb_trials=3, logger=None):
         data.append((item, 'view'))
     for item in list_matviews(conn, schema=schema, nb_trials=nb_trials, logger=logger):
         data.append((item, 'matview'))
-    return _pd.DataFrame(data=data, columns=['name', 'type'])
+    return pd.DataFrame(data=data, columns=['name', 'type'])
 
 
 def list_all_frames(conn, schema=None, nb_trials=3, logger=None):
@@ -467,7 +267,7 @@ def list_all_frames(conn, schema=None, nb_trials=3, logger=None):
         if len(df) > 0:
             df['schema'] = schema
             dfs.append(df)
-    return _pd.concat(dfs, sort=False).reset_index(drop=True)
+    return pd.concat(dfs, sort=False).reset_index(drop=True)
 
 
 def get_frame_length(frame_name, conn, schema=None, nb_trials=3, logger=None):
@@ -1009,16 +809,16 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
         if _p.exists(df_filepath):
             try:
                 if df_filepath.endswith('.parquet'):
-                    local_df = dfload(df_filepath, show_progress=True)
+                    local_df = pd.dfload(df_filepath, show_progress=True)
                 else:
-                    local_df = dfload(df_filepath, index_col=id_name, show_progress=True)
+                    local_df = pd.dfload(df_filepath, index_col=id_name, show_progress=True)
                 local_dup_keys = local_df[local_df.index.duplicated(
                 )].index.drop_duplicates().tolist()
                 if len(local_df) == 0:
                     local_df = None
                 elif hash_name not in local_df.columns:
-                    local_df[hash_name] = _pu.hash_pandas_object(
-                        local_df, index=False, hash_key='emerus_pham').astype(_np.int64)
+                    local_df[hash_name] = pd.util.hash_pandas_object(
+                        local_df, index=False, hash_key='emerus_pham').astype(np.int64)
             except ValueError:
                 local_df = None
         else:
@@ -1034,7 +834,7 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
         else:
             if logger:
                 logger.debug("The local table is empty.")
-            local_md5_df = _pd.DataFrame(index=_pd.Index(
+            local_md5_df = pd.DataFrame(index=pd.Index(
                 [], name=id_name), columns=[hash_name])
 
         # remote_md5_df
@@ -1084,12 +884,12 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                         #logger.debug("offset={} record_cap={}".format(
                             #offset, record_cap))
 
-                    start_time = _pd.Timestamp.utcnow()
+                    start_time = pd.Timestamp.utcnow()
                     df = read_sql(qsql, conn, index_col=id_name,
                                   set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
                     remote_md5_dfs.append(df)
                     # elapsed time is in seconds
-                    elapsed_time = (_pd.Timestamp.utcnow() -
+                    elapsed_time = (pd.Timestamp.utcnow() -
                                     start_time).total_seconds()
 
                     progress_bar.update(record_cap)
@@ -1112,7 +912,7 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
                 df = read_sql(qsql, conn, index_col=id_name,
                               set_index_after=set_index_after, nb_trials=nb_trials, logger=logger)
                 remote_md5_dfs.append(df)
-                remote_md5_df = _pd.concat(remote_md5_dfs, sort=False)
+                remote_md5_df = pd.concat(remote_md5_dfs, sort=False)
 
                 progress_bar.update(remaining)
 
@@ -1128,8 +928,8 @@ def comparesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', 
             if logger:
                 logger.warn("Ignoring the following exception.")
                 logger.warn_last_exception()
-            remote_md5_df = _pd.DataFrame(
-                index=_pd.Index([], name=id_name), columns=[hash_name])
+            remote_md5_df = pd.DataFrame(
+                index=pd.Index([], name=id_name), columns=[hash_name])
             remote_dup_keys = []
             if logger:
                 logger.debug("The remote table is empty.")
@@ -1244,11 +1044,11 @@ def writesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', sc
                     df2 = df[:record_cap]
                     df = df[record_cap:]
 
-                    start_time = _pd.Timestamp.utcnow()
+                    start_time = pd.Timestamp.utcnow()
                     to_sql(df2, table_name, conn, schema=schema,
                            if_exists='append', nb_trials=nb_trials, logger=logger)
                     # elapsed time is in seconds
-                    elapsed_time = (_pd.Timestamp.utcnow() -
+                    elapsed_time = (pd.Timestamp.utcnow() -
                                     start_time).total_seconds()
 
                     progress_bar.update(len(df2))
@@ -1284,11 +1084,11 @@ def writesync_table(conn, df_filepath, table_name, id_name, hash_name='hash', sc
                     df2 = df[:record_cap]
                     df = df[record_cap:]
 
-                    start_time = _pd.Timestamp.utcnow()
+                    start_time = pd.Timestamp.utcnow()
                     to_sql(df2, table_name, conn, schema=schema,
                            if_exists='append', nb_trials=nb_trials, logger=logger)
                     # elapsed time is in seconds
-                    elapsed_time = (_pd.Timestamp.utcnow() -
+                    elapsed_time = (pd.Timestamp.utcnow() -
                                     start_time).total_seconds()
 
                     progress_bar.update(len(df2))
@@ -1390,11 +1190,11 @@ def readsync_table(conn, df_filepath, table_name, id_name, hash_name='hash', set
                     # if logger:
                         # logger.debug("  using query '{}',".format(query_str))
 
-                    start_time = _pd.Timestamp.utcnow()
+                    start_time = pd.Timestamp.utcnow()
                     new_dfs.append(read_sql(query_str, conn, index_col=id_name,
                                             set_index_after=set_index_after, nb_trials=nb_trials, logger=logger))
                     # elapsed time is in seconds
-                    elapsed_time = (_pd.Timestamp.utcnow() -
+                    elapsed_time = (pd.Timestamp.utcnow() -
                                     start_time).total_seconds()
 
                     progress_bar.update(len(id_list2))
@@ -1405,7 +1205,7 @@ def readsync_table(conn, df_filepath, table_name, id_name, hash_name='hash', set
                         else:  # too fast
                             record_cap *= 2
 
-            new_df = _pd.concat(new_dfs)
+            new_df = pd.concat(new_dfs)
             if not hash_name in new_df.columns:
                 new_df = new_df.join(new_md5_df)
 
@@ -1428,7 +1228,7 @@ def readsync_table(conn, df_filepath, table_name, id_name, hash_name='hash', set
             df = local_df[0:0] if new_df is None else new_df
         else:
             local2_df = local_df[local_df.index.isin(same_keys)]
-            df = local2_df if new_df is None else _pd.concat(
+            df = local2_df if new_df is None else pd.concat(
                 [local2_df, new_df], sort=True)
         if new_df is not None:
             df.index = df.index.astype(new_md5_df.index.dtype)
@@ -1438,8 +1238,8 @@ def readsync_table(conn, df_filepath, table_name, id_name, hash_name='hash', set
         if logger:
             logger.debug("Saving all {} records to file...".format(len(df)))
         if bg_write_csv is True:
-            bg = BgInvoke(dfsave, df, df_filepath, index=True)
+            bg = BgInvoke(pd.dfsave, df, df_filepath, index=True)
             return df, bg
         else:
-            dfsave(df, df_filepath, index=True)
+            pd.dfsave(df, df_filepath, index=True)
             return df
