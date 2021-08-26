@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 from setuptools import setup, find_packages, find_namespace_packages
-from mt.sql.version import VERSION
+from mt.sql.version import version
 
 setup(
     name='mtsql',
-    version=VERSION,
+    version=version,
     description="Extra Python modules to deal with the interaction between pandas dataframes and remote SQL servers, for Minh-Tri Pham",
     author=["Minh-Tri Pham"],
     packages=find_packages() + find_namespace_packages(include=['mt.*']),
@@ -15,8 +15,8 @@ setup(
         'tqdm',  # for a nice progress bar
         'psycopg2-binary',  # for psql access
         # 'mysql', # for mysql access
-        'mtbase>=1.4.6',
-        'mtpandas>=0.4.7', # to have dfload and dfsave
+        'mtbase>=1.6',
+        'mtpandas>=0.5', # to have dfload and dfsave
     ],
     url='https://github.com/inteplus/mtsql',
     project_urls={
