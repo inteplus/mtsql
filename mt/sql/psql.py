@@ -902,7 +902,7 @@ def comparesync_table(engine, df_filepath, table_name, id_name, hash_name='hash'
                     local_df = None
                 elif hash_name not in local_df.columns:
                     local_df[hash_name] = pd.util.hash_pandas_object(
-                        local_df, index=False, hash_key='emerus_pham').astype(np.int64)
+                        local_df, index=False, hash_key='emerus_pham_2015').astype(np.int64)
             except ValueError as e:
                 if logger:
                     logger.warn("Ignored exception: {}".format(str(e)))
