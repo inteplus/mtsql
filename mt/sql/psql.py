@@ -1036,7 +1036,7 @@ def comparesync_table(engine, df_filepath, table_name, id_name, hash_name='hash'
         return local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys
 
 
-def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', schema=None, max_records_per_query=None, conn_ro=None, engine_ro=None, nb_trials=3, logger=None):
+def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', schema=None, max_records_per_query=None, conn_ro=None, engine_ro=None, drop_cascade: bool = False, nb_trials=3, logger=None):
     '''Writes and updates a remote PostgreSQL table from a local CSV table by updating only rows which have been changed.
 
     Parameters
@@ -1061,6 +1061,8 @@ def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', 
         read-only connection to the PostgreSQL database. If not specified, it is set to `engine`. This is an old-style keyword argument. It will be replaced by `engine_ro`.
     engine_ro : sqlalchemy.engine.Engine
         read-only connection engine to the server. If not specified, it is set to `engine`. This new keyword argument will replace `conn_ro`.
+    drop_cascade : bool
+        whether or not to drop using the CASCADE option when dropping a table
     nb_trials: int
         number of read_sql() trials
     logger: logging.Logger or None
@@ -1104,7 +1106,7 @@ def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', 
             if logger:
                 logger.debug(
                     "Deleting remote table {} if it exists because local table is empty...".format(frame_sql_str))
-            query_str = "DROP TABLE IF EXISTS {};".format(frame_sql_str)
+            query_str = "DROP TABLE IF EXISTS {}{};".format(frame_sql_str, " CASCADE" if drop_cascade else "")
             exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
             return local_df
 
@@ -1117,8 +1119,8 @@ def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', 
             if logger:
                 logger.debug(
                     "Deleting table {} if it exists since there is no reusable remote record...".format(frame_sql_str))
-            query_str = "DROP TABLE IF EXISTS {};".format(
-                frame_sql_str)  # delete the remote table
+            query_str = "DROP TABLE IF EXISTS {}{};".format(
+                frame_sql_str, " CASCADE" if drop_cascade else "")  # delete the remote table
             exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
         record_cap = 128 if max_records_per_query is None else max_records_per_query
