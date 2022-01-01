@@ -1,5 +1,7 @@
 '''Useful modules for accessing PostgreSQL'''
 
+from typing import Optional
+
 import re
 import psycopg2 as ps
 import sqlalchemy.exc as se
@@ -19,7 +21,7 @@ __all__ = ['pg_get_locked_transactions', 'pg_cancel_backend', 'pg_cancel_all_bac
 # ----- debugging functions -----
 
 
-def pg_get_locked_transactions(engine, schema=None):
+def pg_get_locked_transactions(engine, schema: Optional[str] = None):
     '''Obtains a dataframe representing transactions which have been locked by the server.
 
     Parameters
@@ -70,7 +72,7 @@ def pg_cancel_backend(engine, pid):
     return pd.read_sql(query_str, engine)
 
 
-def pg_cancel_all_backends(engine, schema=None, logger=None):
+def pg_cancel_all_backends(engine, schema: Optional[str] = None, logger=None):
     '''Cancels all backend transactions.
 
     Parameters
@@ -136,7 +138,7 @@ def as_column_name(s):
     return s2
 
 
-def to_sql(df, name, engine, schema=None, if_exists='fail', nb_trials=3, logger=None, **kwargs):
+def to_sql(df, name, engine, schema: Optional[str] = None, if_exists='fail', nb_trials: int = 3, logger=None, **kwargs):
     """Writes records stored in a DataFrame to an SQL database, with a number of trials to overcome OperationalError.
 
     Parameters
@@ -223,7 +225,7 @@ def to_sql(df, name, engine, schema=None, if_exists='fail', nb_trials=3, logger=
 # ----- simple functions -----
 
 
-def rename_schema(old_schema, new_schema, engine, nb_trials=3, logger=None):
+def rename_schema(old_schema, new_schema, engine, nb_trials: int = 3, logger=None):
     '''Renames a schema.
 
     Parameters
@@ -243,7 +245,7 @@ def rename_schema(old_schema, new_schema, engine, nb_trials=3, logger=None):
         old_schema, new_schema), engine, nb_trials=nb_trials, logger=logger)
 
 
-def list_views(engine, schema=None, nb_trials=3, logger=None):
+def list_views(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all views of a given schema.
 
     Parameters
@@ -271,7 +273,7 @@ def list_views(engine, schema=None, nb_trials=3, logger=None):
     return df['viewname'].tolist()
 
 
-def list_matviews(engine, schema=None, nb_trials=3, logger=None):
+def list_matviews(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all materialized views of a given schema.
 
     Parameters
@@ -298,7 +300,7 @@ def list_matviews(engine, schema=None, nb_trials=3, logger=None):
     return df['matviewname'].tolist()
 
 
-def list_frames(engine, schema=None, nb_trials=3, logger=None):
+def list_frames(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all dataframes (tables/views/materialized views) of a given schema.
 
     Parameters
@@ -327,7 +329,7 @@ def list_frames(engine, schema=None, nb_trials=3, logger=None):
     return pd.DataFrame(data=data, columns=['name', 'type'])
 
 
-def list_all_frames(engine, schema=None, nb_trials=3, logger=None):
+def list_all_frames(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all dataframes (tables/views/materialized views) across all schemas.
 
     Parameters
@@ -354,7 +356,7 @@ def list_all_frames(engine, schema=None, nb_trials=3, logger=None):
     return pd.concat(dfs, sort=False).reset_index(drop=True)
 
 
-def get_frame_length(frame_name, engine, schema=None, nb_trials=3, logger=None):
+def get_frame_length(frame_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Gets the number of rows of a dataframes (tables/views/materialized views).
 
     Parameters
@@ -381,7 +383,7 @@ def get_frame_length(frame_name, engine, schema=None, nb_trials=3, logger=None):
     return read_sql_query("SELECT COUNT(*) a FROM {};".format(frame_sql_str), engine, nb_trials=nb_trials, logger=logger)['a'][0]
 
 
-def get_frame_dependencies(frame_name, engine, schema=None, nb_trials=3, logger=None):
+def get_frame_dependencies(frame_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Gets the list of all frames that depend on the given frame.
     '''
     query_str = """
@@ -407,7 +409,7 @@ def get_frame_dependencies(frame_name, engine, schema=None, nb_trials=3, logger=
     return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def get_view_sql_code(view_name, engine, schema=None, nb_trials=3, logger=None):
+def get_view_sql_code(view_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Gets the SQL string of a view.
 
     Parameters
@@ -432,7 +434,7 @@ def get_view_sql_code(view_name, engine, schema=None, nb_trials=3, logger=None):
                           engine, nb_trials=nb_trials, logger=logger)['a'][0]
 
 
-def rename_table(schema, old_table_name, new_table_name, engine, nb_trials=3, logger=None):
+def rename_table(old_table_name, new_table_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Renames a table of a schema.
 
     Parameters
@@ -459,7 +461,7 @@ def rename_table(schema, old_table_name, new_table_name, engine, nb_trials=3, lo
                                                      new_table_name), engine, nb_trials=nb_trials, logger=logger)
 
 
-def drop_table(table_name, engine, schema=None, restrict=True, nb_trials=3, logger=None):
+def drop_table(table_name, engine, schema: Optional[str] = None, restrict=True, nb_trials: int = 3, logger=None):
     '''Drops a table if it exists, with restrict or cascade options.
 
     Parameters
@@ -487,7 +489,7 @@ def drop_table(table_name, engine, schema=None, restrict=True, nb_trials=3, logg
     return exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def rename_view(old_view_name, new_view_name, engine, schema=None, nb_trials=3, logger=None):
+def rename_view(old_view_name, new_view_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Renames a view of a schema.
 
     Parameters
@@ -510,7 +512,7 @@ def rename_view(old_view_name, new_view_name, engine, schema=None, nb_trials=3, 
                                                     new_view_name), engine, nb_trials=nb_trials, logger=logger)
 
 
-def drop_view(view_name, engine, schema=None, restrict=True, nb_trials=3, logger=None):
+def drop_view(view_name, engine, schema: Optional[str] = None, restrict=True, nb_trials: int = 3, logger=None):
     '''Drops a view if it exists, with restrict or cascade options.
 
     Parameters
@@ -538,7 +540,7 @@ def drop_view(view_name, engine, schema=None, restrict=True, nb_trials=3, logger
     return exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def rename_matview(old_matview_name, new_matview_name, engine, schema=None, nb_trials=3, logger=None):
+def rename_matview(old_matview_name, new_matview_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Renames a materialized view of a schema.
 
     Parameters
@@ -561,7 +563,7 @@ def rename_matview(old_matview_name, new_matview_name, engine, schema=None, nb_t
         frame_sql_str, new_matview_name), engine, nb_trials=nb_trials, logger=logger)
 
 
-def drop_matview(matview_name, engine, schema=None, restrict=True, nb_trials=3, logger=None):
+def drop_matview(matview_name, engine, schema: Optional[str] = None, restrict=True, nb_trials: int = 3, logger=None):
     '''Drops a mateiralized view if it exists, with restrict or cascade options.
 
     Parameters
@@ -589,7 +591,7 @@ def drop_matview(matview_name, engine, schema=None, restrict=True, nb_trials=3, 
     return exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def frame_exists(frame_name, engine, schema=None, nb_trials=3, logger=None):
+def frame_exists(frame_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Checks if a frame exists.
 
     Parameters
@@ -617,7 +619,7 @@ def frame_exists(frame_name, engine, schema=None, nb_trials=3, logger=None):
     return frame_name in list_matviews(engine, schema=schema, nb_trials=nb_trials, logger=logger)
 
 
-def drop_frame(frame_name, engine, schema=None, restrict=True, nb_trials=3, logger=None):
+def drop_frame(frame_name, engine, schema: Optional[str] = None, restrict=True, nb_trials: int = 3, logger=None):
     '''Drops a frame (table/view/mateiralized view) if it exists, with restrict or cascade options.
 
     Parameters
@@ -648,7 +650,7 @@ def drop_frame(frame_name, engine, schema=None, restrict=True, nb_trials=3, logg
     return False
 
 
-def list_columns_ext(table_name, engine, schema=None, nb_trials=3, logger=None):
+def list_columns_ext(table_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all columns of a given table of a given schema.
 
     Parameters
@@ -688,7 +690,7 @@ def list_columns_ext(table_name, engine, schema=None, nb_trials=3, logger=None):
     return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def list_columns(table_name, engine, schema=None, nb_trials=3, logger=None):
+def list_columns(table_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all columns of a given table of a given schema.
 
     Parameters
@@ -711,7 +713,7 @@ def list_columns(table_name, engine, schema=None, nb_trials=3, logger=None):
     return list_columns_ext(table_name, engine, schema=schema, nb_trials=nb_trials, logger=logger)['column_name'].tolist()
 
 
-def list_primary_columns_ext(frame_name, engine, schema=None, nb_trials=3, logger=None):
+def list_primary_columns_ext(frame_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all primary columns of a given frame of a given schema.
 
     Parameters
@@ -744,7 +746,7 @@ def list_primary_columns_ext(frame_name, engine, schema=None, nb_trials=3, logge
     return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def list_primary_columns(frame_name, engine, schema=None, nb_trials=3, logger=None):
+def list_primary_columns(frame_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Lists all primary columns of a given frame of a given schema.
 
     Parameters
@@ -768,7 +770,7 @@ def list_primary_columns(frame_name, engine, schema=None, nb_trials=3, logger=No
     return list_primary_columns_ext(frame_name, engine, schema=schema, nb_trials=nb_trials, logger=logger)['attname'].tolist()
 
 
-def rename_column(table_name, old_column_name, new_column_name, engine, schema=None, nb_trials=3, logger=None):
+def rename_column(table_name, old_column_name, new_column_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Renames a column of a table.
 
     Parameters
@@ -798,7 +800,7 @@ def rename_column(table_name, old_column_name, new_column_name, engine, schema=N
     exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
-def drop_column(table_name, column_name, engine, schema=None, nb_trials=3, logger=None):
+def drop_column(table_name, column_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
     '''Drops a column of a table.
 
     Parameters
@@ -829,7 +831,7 @@ def drop_column(table_name, column_name, engine, schema=None, nb_trials=3, logge
 # ----- functions to synchronise between a local table and a remote table -----
 
 
-def comparesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema=None, max_records_per_query=None, cond=None, reading_mode=True, nb_trials=3, logger=None):
+def comparesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema: Optional[str] = None, max_records_per_query=None, cond=None, reading_mode=True, nb_trials: int = 3, logger=None):
     '''Compares a local CSV table with a remote PostgreSQL to find out which rows are the same or different.
 
     Parameters
@@ -1039,7 +1041,7 @@ def comparesync_table(engine, df_filepath, table_name, id_name, hash_name='hash'
         return local_df, remote_md5_df, same_keys, diff_keys, local_only_keys, remote_only_keys
 
 
-def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', schema=None, max_records_per_query=None, conn_ro=None, engine_ro=None, drop_cascade: bool = False, nb_trials=3, logger=None):
+def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', schema: Optional[str] = None, max_records_per_query=None, conn_ro=None, engine_ro=None, drop_cascade: bool = False, nb_trials: int = 3, logger=None):
     '''Writes and updates a remote PostgreSQL table from a local CSV table by updating only rows which have been changed.
 
     Parameters
@@ -1201,7 +1203,7 @@ def writesync_table(engine, df_filepath, table_name, id_name, hash_name='hash', 
     return local_df
 
 
-def readsync_table(engine, df_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema=None, cond=None, bg_write_csv=False, max_records_per_query=None, nb_trials=3, logger=None, raise_exception_upon_mismatch=True):
+def readsync_table(engine, df_filepath, table_name, id_name, hash_name='hash', set_index_after=False, columns=['*'], schema: Optional[str] = None, cond=None, bg_write_csv=False, max_records_per_query=None, nb_trials: int = 3, logger=None, raise_exception_upon_mismatch=True):
     '''Reads and updates a local CSV table from a PostgreSQL table by updating only rows which have been changed.
 
     Parameters
