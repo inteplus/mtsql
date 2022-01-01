@@ -7,7 +7,7 @@ from mt import pd
 from .base import frame_sql, list_tables, exec_sql, read_sql_query
 
 
-__all__ = ['list_schemas', 'rename_table', 'drop_table', 'rename_column', 'get_table_sql_code']
+__all__ = ['list_schemas', 'rename_table', 'drop_table', 'rename_column', 'get_table_sql_code', 'list_indices']
 
 
 def list_schemas(engine, nb_trials: int = 3, logger=None):
@@ -130,3 +130,33 @@ def get_table_sql_code(table_name, engine, nb_trials: int = 3, logger=None):
     '''
     query_str = "SELECT sql FROM sqlite_master WHERE type='table' AND name='{}';".format(table_name)
     return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)['sql'][0]
+
+
+def list_indices(engine, nb_trials: int = 3, logger=None):
+    '''Lists all table indices.
+
+    Parameters
+    ----------
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy sqlite3 connection engine created by function `create_engine()`
+    nb_trials: int
+        number of query trials
+    logger: logging.Logger or None
+        logger for debugging
+
+    Returns
+    -------
+    index_map : dict
+        a `{table_name: index_list}` dictionary mapping each table to a list of indices. Only
+        tables with at least one index are listed.
+    '''
+    query_str = "SELECT name, tbl_name FROM sqlite_master WHERE type='index';"
+    df = read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    res = {}
+    for _, row in df.iterrows():
+        table_name = row['tbl_name']
+        if not table_name in res:
+            res[table_name] = []
+        index_name = row['name'][len(table_name)+4:]
+        res[table_name].append(index_name)
+    return res
