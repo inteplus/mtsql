@@ -147,16 +147,18 @@ def list_indices(engine, nb_trials: int = 3, logger=None):
     Returns
     -------
     index_map : dict
-        a `{table_name: index_list}` dictionary mapping each table to a list of indices. Only
-        tables with at least one index are listed.
+        a `{table_name: index_dict}` dictionary mapping each table to a dictionary. Only
+        tables with at least one index are listed. Each table-level dictionary is a mapping
+        that maps an indexed column of the table to an SQL query that defines the index.
     '''
-    query_str = "SELECT name, tbl_name FROM sqlite_master WHERE type='index';"
+    query_str = "SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index';"
     df = read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
     res = {}
     for _, row in df.iterrows():
         table_name = row['tbl_name']
         if not table_name in res:
-            res[table_name] = []
+            res[table_name] = {}
+        res2 = res[table_name]
         index_name = row['name'][len(table_name)+4:]
-        res[table_name].append(index_name)
+        res2[index_name] = row['sql']
     return res
