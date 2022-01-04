@@ -189,7 +189,7 @@ def make_index(table_name: str, index_col: str, engine, nb_trials: int = 3, logg
     if table_name in indices and index_col in indices[table_name]:
         return False
 
-    query_str = 'CREATE INDEX ix_{table_name}_{index_col} ON {table_name} (index_col)'.format(
+    query_str = 'CREATE INDEX ix_{table_name}_{index_col} ON {table_name} ({index_col})'.format(
         table_name=table_name,
         index_col=index_col,
     )
