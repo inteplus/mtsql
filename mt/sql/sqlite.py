@@ -7,7 +7,7 @@ from mt import pd
 from .base import frame_sql, list_tables, exec_sql, read_sql_query
 
 
-__all__ = ['list_schemas', 'rename_table', 'drop_table', 'rename_column', 'get_table_sql_code', 'list_indices', 'make_index']
+__all__ = ['list_schemas', 'rename_table', 'drop_table', 'rename_column', 'get_table_sql_code', 'list_indices', 'make_index', 'vacuum']
 
 
 def list_schemas(engine, nb_trials: int = 3, logger=None):
@@ -195,3 +195,16 @@ def make_index(table_name: str, index_col: str, engine, nb_trials: int = 3, logg
     )
     engine.execute(query_str)
     return True
+
+
+def vacuum(engine):
+    '''Makes the sqlite file as compact as possible.
+
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.Engine
+        connection engine to an sqlite3 database
+    '''
+    engine.execute('VACUUM;')
+
+
