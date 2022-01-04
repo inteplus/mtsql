@@ -7,7 +7,7 @@ from mt import pd
 from .base import frame_sql, list_tables, exec_sql, read_sql_query
 
 
-__all__ = ['list_schemas', 'rename_table', 'drop_table', 'rename_column', 'get_table_sql_code', 'list_indices']
+__all__ = ['list_schemas', 'rename_table', 'drop_table', 'rename_column', 'get_table_sql_code', 'list_indices', 'make_index']
 
 
 def list_schemas(engine, nb_trials: int = 3, logger=None):
@@ -162,3 +162,36 @@ def list_indices(engine, nb_trials: int = 3, logger=None):
         index_name = row['name'][len(table_name)+4:]
         res2[index_name] = row['sql']
     return res
+
+def make_index(table_name: str, index_col: str, engine, nb_trials: int = 3, logger=None):
+    '''Makes an index via a given column of a table.
+
+    Parameters
+    ----------
+    table_name: str
+        table name
+    index_col : str
+        name of the column to be indexed
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy sqlite3 connection engine created by function `create_engine()`
+    nb_trials: int
+        number of query trials
+    logger: logging.Logger or None
+        logger for debugging
+
+    Returns
+    -------
+    bool
+        True if a new index has been created. False if the index exists
+    '''
+
+    indices = list_indices(engine, nb_trials=nb_trials, logger=logger)
+    if table_name in indices and index_col in indices[table_name]:
+        return False
+
+    query_str = 'CREATE INDEX ix_{table_name}_{index_col} ON {table_name} (index_col)'.format(
+        table_name=table_name,
+        index_col=index_col,
+    )
+    engine.execute(query_str)
+    return True
