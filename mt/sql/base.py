@@ -8,6 +8,7 @@ import psycopg2 as ps
 from tqdm import tqdm
 
 from mt import pd
+from mt.base.contextlib import nullcontext
 
 
 __all__ = [
@@ -77,8 +78,11 @@ def read_sql(
 ) -> pd.DataFrame:
     """Read an SQL query with a number of trials to overcome OperationalError.
 
-    The function wraps :func:`pandas.read_sql` and shows a progress bar when iterating over chunks
-    if argument `chunksize` is not None. A dataframe is always returned.
+    The function wraps :func:`pandas.read_sql`. However, when `chunksize` is not None, it iterates
+    over chunks and concatenate them. In addition, if `logger` is not None, a progress bar is shown
+    in that case.
+
+    A dataframe is always returned.
 
     Parameters
     ----------
@@ -94,7 +98,8 @@ def read_sql(
     nb_trials: int
         number of query trials. If there are many chunks, the trials apply to the first chunk
     chunksize : int, default None
-        If specified, iteratively reads a number of `chunksize` rows and shows a progress bar.
+        If specified, iteratively reads a number of `chunksize` rows. In this case, a progress bar
+        is also shown if `logger` is provided.
     logger: logging.Logger or None
         logger for debugging
     kwargs: dict
@@ -128,11 +133,16 @@ def read_sql(
     if chunksize is None:
         return finish(res)
 
-    with tqdm(unit="row") as progress_bar:
+    if logger:
+        context = tqdm(unit="row")
+    else:
+        context = nullcontext()
+    with context:
         dfs = []
         for df in res:
             dfs.append(df)
-            progress_bar.update(len(df))
+            if logger:
+                context.update(len(df))
         df = pd.concat(dfs)
 
     return finish(df)
