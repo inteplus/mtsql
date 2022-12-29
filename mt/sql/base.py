@@ -74,15 +74,15 @@ def read_sql(
     chunksize: tp.Optional[int] = None,
     logger=None,
     **kwargs
-):
+) -> pd.DataFrame:
     """Read an SQL query with a number of trials to overcome OperationalError.
 
-    The function wraps :func:`pandas.read_sql` and shows a progress bar if argument `chunksize` is
-    not None.
+    The function wraps :func:`pandas.read_sql` and shows a progress bar when iterating over chunks
+    if argument `chunksize` is not None. A dataframe is always returned.
 
     Parameters
     ----------
-    sql : strh
+    sql : str
         SQL query to be executed
     engine : sqlalchemy.engine.Engine
         connection engine to the server
@@ -99,6 +99,11 @@ def read_sql(
         logger for debugging
     kwargs: dict
         other keyword arguments to be passed directly to :func:`pandas.read_sql`
+
+    Returns
+    -------
+    pandas.DataFrame
+        the output dataframe
 
     See Also
     --------
