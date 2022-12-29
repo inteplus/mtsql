@@ -1,25 +1,36 @@
-'''Base functions dealing with an SQL database.'''
+"""Base functions dealing with an SQL database."""
 
-from typing import Optional
+import typing as tp
 
 import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg2 as ps
+from tqdm import tqdm
+
 from mt import pd
 
 
-__all__ = ['frame_sql', 'run_func', 'read_sql', 'read_sql_query', 'read_sql_table', 'exec_sql', 'list_schemas', 'list_tables']
+__all__ = [
+    "frame_sql",
+    "run_func",
+    "read_sql",
+    "read_sql_query",
+    "read_sql_table",
+    "exec_sql",
+    "list_schemas",
+    "list_tables",
+]
 
 
-def frame_sql(frame_name, schema: Optional[str] = None):
-    return frame_name if schema is None else '{}.{}'.format(schema, frame_name)
+def frame_sql(frame_name, schema: tp.Optional[str] = None):
+    return frame_name if schema is None else "{}.{}".format(schema, frame_name)
 
 
 # ----- functions dealing with sql queries to overcome OperationalError -----
 
 
 def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
-    '''Attempt to run a function a number of times to overcome OperationalError exceptions.
+    """Attempt to run a function a number of times to overcome OperationalError exceptions.
 
     Parameters
     ----------
@@ -33,7 +44,7 @@ def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
         logger for debugging
     kwargs: dict
         keyword arguments to be passed to the function
-    '''
+    """
     for x in range(nb_trials):
         try:
             return func(*args, **kwargs)
@@ -41,27 +52,49 @@ def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
             raise
         except (se.DatabaseError, se.OperationalError, ps.OperationalError) as e:
             if logger:
-                with logger.scoped_warn("Ignored an exception raised by failed attempt {}/{} to execute `{}.{}()`".format(x+1, nb_trials, func.__module__, func.__name__)):
+                with logger.scoped_warn(
+                    "Ignored an exception raised by failed attempt {}/{} to execute `{}.{}()`".format(
+                        x + 1, nb_trials, func.__module__, func.__name__
+                    )
+                ):
                     logger.warn_last_exception()
-    raise RuntimeError("Attempted {} times to execute `{}.{}()` but failed.".format(
-        nb_trials, func.__module__, func.__name__))
+    raise RuntimeError(
+        "Attempted {} times to execute `{}.{}()` but failed.".format(
+            nb_trials, func.__module__, func.__name__
+        )
+    )
 
 
-def read_sql(sql, engine, index_col=None, set_index_after=False, nb_trials: int = 3, logger=None, **kwargs):
+def read_sql(
+    sql,
+    engine,
+    index_col: tp.Union[str, tp.List[str], None] = None,
+    set_index_after: bool = False,
+    nb_trials: int = 3,
+    chunksize: tp.Optional[int] = None,
+    logger=None,
+    **kwargs
+):
     """Read an SQL query with a number of trials to overcome OperationalError.
+
+    The function wraps :func:`pandas.read_sql` and shows a progress bar if argument `chunksize` is
+    not None.
 
     Parameters
     ----------
-    sql : str
+    sql : strh
         SQL query to be executed
     engine : sqlalchemy.engine.Engine
         connection engine to the server
     index_col: string or list of strings, optional, default: None
         Column(s) to set as index(MultiIndex). See :func:`pandas.read_sql`.
     set_index_after: bool
-        whether to set index specified by index_col via the pandas.read_sql() function or after the function has been invoked
+        whether to set index specified by index_col via the pandas.read_sql() function or after the
+        function has been invoked
     nb_trials: int
-        number of query trials
+        number of query trials. If there are many chunks, the trials apply to the first chunk
+    chunksize : int, default None
+        If specified, iteratively reads a number of `chunksize` rows and shows a progress bar.
     logger: logging.Logger or None
         logger for debugging
     kwargs: dict
@@ -71,14 +104,44 @@ def read_sql(sql, engine, index_col=None, set_index_after=False, nb_trials: int 
     --------
     pandas.read_sql
     """
-    if index_col is None or not set_index_after:
-        return run_func(pd.read_sql, sql, engine, index_col=index_col, nb_trials=nb_trials, logger=logger, **kwargs)
-    df = run_func(pd.read_sql, sql, engine,
-                  nb_trials=nb_trials, logger=logger, **kwargs)
-    return df.set_index(index_col, drop=True)
+
+    def finish(df):
+        if index_col is None or not set_index_after:
+            return df
+        return df.set_index(index_col, drop=True)
+
+    res = run_func(
+        pd.read_sql,
+        sql,
+        engine,
+        chunksize=chunksize,
+        nb_trials=nb_trials,
+        logger=logger,
+        **kwargs
+    )
+
+    if chunksize is None:
+        return finish(res)
+
+    with tqdm(unit="row") as progress_bar:
+        dfs = []
+        for df in res:
+            dfs.append(df)
+            progress_bar.update(len(df))
+        df = pd.concat(dfs)
+
+    return finish(df)
 
 
-def read_sql_query(sql, engine, index_col=None, set_index_after=False, nb_trials: int = 3, logger=None, **kwargs):
+def read_sql_query(
+    sql,
+    engine,
+    index_col=None,
+    set_index_after=False,
+    nb_trials: int = 3,
+    logger=None,
+    **kwargs
+):
     """Read an SQL query with a number of trials to overcome OperationalError.
 
     Parameters
@@ -103,9 +166,18 @@ def read_sql_query(sql, engine, index_col=None, set_index_after=False, nb_trials
     pandas.read_sql_query
     """
     if index_col is None or not set_index_after:
-        return run_func(pd.read_sql_query, sql, engine, index_col=index_col, nb_trials=nb_trials, logger=logger, **kwargs)
-    df = run_func(pd.read_sql_query, sql, engine,
-                  nb_trials=nb_trials, logger=logger, **kwargs)
+        return run_func(
+            pd.read_sql_query,
+            sql,
+            engine,
+            index_col=index_col,
+            nb_trials=nb_trials,
+            logger=logger,
+            **kwargs
+        )
+    df = run_func(
+        pd.read_sql_query, sql, engine, nb_trials=nb_trials, logger=logger, **kwargs
+    )
     return df.set_index(index_col, drop=True)
 
 
@@ -128,7 +200,14 @@ def read_sql_table(table_name, engine, nb_trials: int = 3, logger=None, **kwargs
     pandas.read_sql_table
 
     """
-    return run_func(pd.read_sql_table, table_name, engine, nb_trials=nb_trials, logger=logger, **kwargs)
+    return run_func(
+        pd.read_sql_table,
+        table_name,
+        engine,
+        nb_trials=nb_trials,
+        logger=logger,
+        **kwargs
+    )
 
 
 def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
@@ -148,14 +227,16 @@ def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
         logger for debugging
 
     """
-    return run_func(engine.execute, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs)
+    return run_func(
+        engine.execute, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs
+    )
 
 
 # ----- functions navigating the database -----
 
 
 def list_schemas(engine, nb_trials: int = 3, logger=None):
-    '''Lists all schemas.
+    """Lists all schemas.
 
     Parameters
     ----------
@@ -170,12 +251,16 @@ def list_schemas(engine, nb_trials: int = 3, logger=None):
     -------
     list
         list of all schema names
-    '''
-    return run_func(sa.inspect, engine, nb_trials=nb_trials, logger=logger).get_schemas()
+    """
+    return run_func(
+        sa.inspect, engine, nb_trials=nb_trials, logger=logger
+    ).get_schemas()
 
 
-def list_tables(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
-    '''Lists all tables of a given schema.
+def list_tables(
+    engine, schema: tp.Optional[str] = None, nb_trials: int = 3, logger=None
+):
+    """Lists all tables of a given schema.
 
     Parameters
     ----------
@@ -192,5 +277,7 @@ def list_tables(engine, schema: Optional[str] = None, nb_trials: int = 3, logger
     -------
     list
         list of all table names
-    '''
-    return run_func(engine.table_names, schema=schema, nb_trials=nb_trials, logger=logger)
+    """
+    return run_func(
+        engine.table_names, schema=schema, nb_trials=nb_trials, logger=logger
+    )
