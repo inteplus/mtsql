@@ -132,33 +132,27 @@ def read_sql(
     if chunksize is None:
         return finish(res)
 
-    if logger:
-        s = "read_sql: '{}'".format(sql)
-        spinner = Halo(s, spinner="dots")
-        spinner.start()
-        ts = pd.Timestamp.now()
-        cnt = 0
-    else:
-        spinner = None
-
+    s = "read_sql: '{}'".format(sql)
+    spinner = Halo(s, spinner="dots", enabled=bool(logger))
+    spinner.start()
+    ts = pd.Timestamp.now()
+    cnt = 0
     try:
         dfs = []
         for df in res:
             dfs.append(df)
-            if logger:
-                cnt += len(df)
-                td = (pd.Timestamp.now() - ts).total_seconds() + 0.001
-                s = "{} rows ({} rows/sec)".format(cnt, cnt / td)
-                spinner.text = s
+            cnt += len(df)
+            td = (pd.Timestamp.now() - ts).total_seconds() + 0.001
+            s = "{} rows ({} rows/sec)".format(cnt, cnt / td)
+            spinner.text = s
         df = pd.concat(dfs)
-        if logger:
-            s = "{} rows".format(cnt)
-            spinner.succeed(s)
+        s = "{} rows".format(cnt)
+        spinner.succeed(s)
     except:
+        s = "{} rows".format(cnt)
+        spinner.fail(s)
         if logger:
             logger.warn_last_exception()
-            s = "{} rows".format(cnt)
-            spinner.fail(s)
         raise
 
     return finish(df)
