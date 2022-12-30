@@ -7,8 +7,7 @@ import sqlalchemy.exc as se
 import psycopg2 as ps
 from tqdm import tqdm
 
-from mt import pd
-from mt.base.contextlib import nullcontext
+from mt import ctx, pd
 
 
 __all__ = [
@@ -136,7 +135,7 @@ def read_sql(
     if logger:
         context = tqdm(unit="row")
     else:
-        context = nullcontext()
+        context = ctx.nullcontext()
     with context:
         dfs = []
         for df in res:
