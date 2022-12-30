@@ -135,6 +135,7 @@ def read_sql(
     if logger:
         s = "read_sql: '{}'".format(sql)
         spinner = Halo(s, spinner="dots")
+        spinner.start()
         ts = pd.Timestamp.now()
         cnt = 0
     else:
