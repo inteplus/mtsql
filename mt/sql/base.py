@@ -5,9 +5,9 @@ import typing as tp
 import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg2 as ps
-from tqdm import tqdm
+from halo import Halo
 
-from mt import ctx, pd
+from mt import pd
 
 
 __all__ = [
@@ -133,16 +133,32 @@ def read_sql(
         return finish(res)
 
     if logger:
-        context = tqdm(unit="row")
+        s = "read_sql: '{}'".format(sql)
+        spinner = Halo(s, spinner="dots")
+        ts = pd.Timestamp.now()
+        cnt = 0
     else:
-        context = ctx.nullcontext()
-    with context:
+        spinner = None
+
+    try:
         dfs = []
         for df in res:
             dfs.append(df)
             if logger:
-                context.update(len(df))
+                cnt += len(df)
+                td = (pd.Timestamp.now() - ts).total_seconds() + 0.001
+                s = "{} rows ({} rows/sec)".format(cnt, cnt / td)
+                spinner.text = s
         df = pd.concat(dfs)
+        if logger:
+            s = "{} rows".format(cnt)
+            spinner.succeed(s)
+    except:
+        if logger:
+            logger.warn_last_exception()
+            s = "{} rows".format(cnt)
+            spinner.fail(s)
+        raise
 
     return finish(df)
 
