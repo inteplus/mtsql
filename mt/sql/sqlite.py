@@ -2,9 +2,7 @@
 
 from typing import Optional
 
-from mt import pd
-
-from .base import frame_sql, list_tables, exec_sql, read_sql_query
+from .base import frame_sql, list_tables, exec_sql, read_sql, read_sql_query
 
 
 __all__ = [
