@@ -69,7 +69,6 @@ def read_sql(
     sql,
     engine,
     index_col: tp.Union[str, tp.List[str], None] = None,
-    set_index_after: bool = False,
     chunksize: tp.Optional[int] = None,
     nb_trials: int = 3,
     exception_handling: str = "raise",
@@ -91,10 +90,7 @@ def read_sql(
     engine : sqlalchemy.engine.Engine
         connection engine to the server
     index_col: string or list of strings, optional, default: None
-        Column(s) to set as index(MultiIndex). See :func:`pandas.read_sql`.
-    set_index_after: bool
-        whether to set index specified by index_col via the pandas.read_sql() function or after the
-        function has been invoked
+        Column(s) to set as index(MultiIndex). Passed as-is to :func:`pandas.read_sql`.
     chunksize : int, default None
         If specified, iteratively reads a number of `chunksize` rows. In this case, a progress bar
         is also shown if `logger` is provided.
@@ -121,11 +117,6 @@ def read_sql(
     pandas.read_sql
     """
 
-    def finish(df):
-        if index_col is None or not set_index_after:
-            return df
-        return df.set_index(index_col, drop=True)
-
     if chunksize is not None:
         s = "read_sql: '{}'".format(sql)
         spinner = Halo(s, spinner="dots", enabled=bool(logger))
@@ -137,6 +128,7 @@ def read_sql(
         pd.read_sql,
         sql,
         engine,
+        index_col=index_col,
         chunksize=chunksize,
         nb_trials=nb_trials,
         logger=logger,
@@ -144,7 +136,7 @@ def read_sql(
     )
 
     if chunksize is None:
-        return finish(res)
+        return res
 
     try:
         dfs = []
@@ -172,7 +164,7 @@ def read_sql(
             )
         df = pd.concat(dfs)
 
-    return finish(df)
+    return df
 
 
 def read_sql_query(
