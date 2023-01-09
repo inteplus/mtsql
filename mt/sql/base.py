@@ -70,8 +70,9 @@ def read_sql(
     engine,
     index_col: tp.Union[str, tp.List[str], None] = None,
     set_index_after: bool = False,
-    nb_trials: int = 3,
     chunksize: tp.Optional[int] = None,
+    nb_trials: int = 3,
+    exception_handling: str = "raise",
     logger=None,
     **kwargs
 ) -> pd.DataFrame:
@@ -94,11 +95,17 @@ def read_sql(
     set_index_after: bool
         whether to set index specified by index_col via the pandas.read_sql() function or after the
         function has been invoked
-    nb_trials: int
-        number of query trials. If there are many chunks, the trials apply to the first chunk
     chunksize : int, default None
         If specified, iteratively reads a number of `chunksize` rows. In this case, a progress bar
         is also shown if `logger` is provided.
+    nb_trials: int
+        number of query trials. If `chunksize` is provided, this is only effective before an
+        iterator is returned from pandas.
+    exception_handling : {'warn', 'raise'}
+        policy for handling SQL-raised exceptions when iterating over many chunks to completely
+        download the result. Only valid when `chunksize` is provided. Right now there are only
+        2 policies. Either to raise the exception as-is ('raise'), or to raise the exception as a
+        warning ('warn') and return whatever has been downloaded.
     logger: logging.Logger or None
         logger for debugging
     kwargs: dict
@@ -155,7 +162,15 @@ def read_sql(
         spinner.fail(s)
         if logger:
             logger.warn_last_exception()
-        raise
+        if exception_handling == "raise":
+            raise
+        if exception_handling != "warn":
+            raise ValueError(
+                "Unknown value for argument 'exception_handling': '{}'.".format(
+                    exception_handling
+                )
+            )
+        df = pd.concat(dfs)
 
     return finish(df)
 
