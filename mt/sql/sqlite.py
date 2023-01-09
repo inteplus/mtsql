@@ -68,7 +68,7 @@ def rename_table(
     -------
     whatever exec_sql() returns
     """
-    frame_sql_str = frame_sql(table_name, schema=schema)
+    frame_sql_str = frame_sql(old_table_name, schema=schema)
     query_str = 'ALTER TABLE {} RENAME TO "{}";'.format(frame_sql_str, new_table_name)
     exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
