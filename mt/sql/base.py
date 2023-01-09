@@ -119,6 +119,13 @@ def read_sql(
             return df
         return df.set_index(index_col, drop=True)
 
+    if chunksize is not None:
+        s = "read_sql: '{}'".format(sql)
+        spinner = Halo(s, spinner="dots", enabled=bool(logger))
+        spinner.start()
+        ts = pd.Timestamp.now()
+        cnt = 0
+
     res = run_func(
         pd.read_sql,
         sql,
@@ -132,11 +139,6 @@ def read_sql(
     if chunksize is None:
         return finish(res)
 
-    s = "read_sql: '{}'".format(sql)
-    spinner = Halo(s, spinner="dots", enabled=bool(logger))
-    spinner.start()
-    ts = pd.Timestamp.now()
-    cnt = 0
     try:
         dfs = []
         for df in res:
