@@ -1,6 +1,12 @@
 """Base functions dealing with an sqlite3 file database."""
 
-from typing import Optional
+import typing as tp
+
+import sqlalchemy as sa
+
+from mt import ctx
+
+from mt.base import path
 
 from .base import frame_sql, list_tables, exec_sql, read_sql, read_sql_query
 
@@ -14,6 +20,7 @@ __all__ = [
     "list_indices",
     "make_index",
     "vacuum",
+    "clone_database",
 ]
 
 
@@ -43,7 +50,7 @@ def rename_table(
     old_table_name,
     new_table_name,
     engine,
-    schema: Optional[str] = None,
+    schema: tp.Optional[str] = None,
     nb_trials: int = 3,
     logger=None,
 ):
@@ -74,7 +81,7 @@ def rename_table(
 
 
 def drop_table(
-    table_name, engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None
+    table_name, engine, schema: tp.Optional[str] = None, nb_trials: int = 3, logger=None
 ):
     """Drops a table if it exists, with restrict or cascade options.
 
@@ -105,7 +112,7 @@ def rename_column(
     old_column_name,
     new_column_name,
     engine,
-    schema: Optional[str] = None,
+    schema: tp.Optional[str] = None,
     nb_trials: int = 3,
     logger=None,
 ):
@@ -255,3 +262,44 @@ def integrity_check(engine):
     """
     query_str = "pragma integrity_check;"
     return engine.execute(query_str)
+
+
+def clone_database(src_filepath, dst_filepath, logger=None):
+    """Clones an sqlite3 db from a source filepath to a target filepath.
+
+    Parameters
+    ----------
+    src_filepath : str
+        filepath to the source database
+    dst_filepath : str
+        filepath to the target database
+    logger: logging.Logger or None
+        logger for debugging
+    """
+
+    if not path.exists(dst_filepath):
+        sa.create_engine("sqlite:///" + dst_filepath)
+
+    src_engine = sa.create_engine("sqlite:///" + src_filepath)
+    l_tableNames = list_tables(src_engine, logger=logger)
+    if logger:
+        context = logger.scoped_info("Cloning {} tables".format(len(l_tableNames)))
+    else:
+        context = ctx.nullcontext()
+    with context:
+        if logger:
+            logger.info("Src filepath: {}".format(src_filepath))
+            logger.info("Dst filepath: {}".format(dst_filepath))
+
+        src_engine.execute("ATTACH DATABASE '{}' AS other;".format(dst_filepath))
+
+        for table_name in l_tableNames:
+            if logger:
+                logger.info("Table: {}".format(table_name))
+            src_engine.execute(
+                "INSERT INTO other.{table_name} SELECT * FROM main.{table_name};".format(
+                    table_name
+                )
+            )
+
+        src_engine.execute("DETACH other;")
