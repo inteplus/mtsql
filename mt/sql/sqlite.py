@@ -298,7 +298,7 @@ def clone_database(src_filepath, dst_filepath, logger=None):
                 logger.info("Table: {}".format(table_name))
             src_engine.execute(
                 "INSERT INTO other.{table_name} SELECT * FROM main.{table_name};".format(
-                    table_name
+                    table_name=table_name
                 )
             )
 
