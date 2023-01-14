@@ -4,9 +4,7 @@ import typing as tp
 
 import sqlalchemy as sa
 
-from mt import ctx
-
-from mt.base import path
+from mt import ctx, path
 
 from .base import frame_sql, list_tables, exec_sql, read_sql, read_sql_query
 
@@ -275,7 +273,14 @@ def clone_database(src_filepath, dst_filepath, logger=None):
         filepath to the target database
     logger: logging.Logger or None
         logger for debugging
+
+    Notes
+    -----
+    This function is not yet working properly.
     """
+
+    if logger:
+        logger.warn("Function 'clone_database' does not yet work properly.")
 
     if not path.exists(dst_filepath):
         sa.create_engine("sqlite:///" + dst_filepath)
