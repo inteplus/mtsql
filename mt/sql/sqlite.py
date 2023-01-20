@@ -287,9 +287,7 @@ def clone_database(src_filepath, dst_filepath, logger=None):
 
     src_engine = sa.create_engine("sqlite:///" + src_filepath)
     l_tableNames = list_tables(src_engine, logger=logger)
-    with logging.scoped_info(
-        logger, msg="Cloning {} tables".format(len(l_tableNames)), curly=False
-    ):
+    with logging.scoped_info(logger, "Cloning {} tables".format(len(l_tableNames))):
         if logger:
             logger.info("Src filepath: {}".format(src_filepath))
             logger.info("Dst filepath: {}".format(dst_filepath))
