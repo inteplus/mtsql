@@ -4,7 +4,7 @@ import typing as tp
 
 import sqlalchemy as sa
 
-from mt import path, logging
+from mt import path, logg
 
 from .base import frame_sql, list_tables, exec_sql, read_sql, read_sql_query
 
@@ -287,7 +287,7 @@ def clone_database(src_filepath, dst_filepath, logger=None):
 
     src_engine = sa.create_engine("sqlite:///" + src_filepath)
     l_tableNames = list_tables(src_engine, logger=logger)
-    with logging.scoped_info(logger, "Cloning {} tables".format(len(l_tableNames))):
+    with logg.scoped_info("Cloning {} tables".format(len(l_tableNames)), logger=logger):
         if logger:
             logger.info("Src filepath: {}".format(src_filepath))
             logger.info("Dst filepath: {}".format(dst_filepath))
