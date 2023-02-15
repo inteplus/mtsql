@@ -90,7 +90,7 @@ def pg_get_locked_transactions(engine, schema: Optional[str] = None):
             ;""".format(
             schema
         )
-    return pd.read_sql(query_str, engine)
+    return pd.read_sql(sa.text(query_str), engine)
 
 
 def pg_cancel_backend(engine, pid):
@@ -104,7 +104,7 @@ def pg_cancel_backend(engine, pid):
         the backend pid to be cancelled
     """
     query_str = "SELECT pg_cancel_backend('{}');".format(pid)
-    return pd.read_sql(query_str, engine)
+    return pd.read_sql(sa.text(query_str), engine)
 
 
 def pg_cancel_all_backends(engine, schema: Optional[str] = None, logger=None):
@@ -268,10 +268,11 @@ def to_sql(
             **kwargs
         )
         if if_exists == "replace":
+            query_str = "ALTER TABLE {} ADD PRIMARY KEY ({});".format(
+                frame_sql_str, ",".join(local_indices)
+            )
             exec_sql(
-                "ALTER TABLE {} ADD PRIMARY KEY ({});".format(
-                    frame_sql_str, ",".join(local_indices)
-                ),
+                query_str,
                 engine,
                 nb_trials=nb_trials,
                 logger=logger,

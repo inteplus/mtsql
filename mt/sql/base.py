@@ -13,6 +13,7 @@ from mt import pd
 __all__ = [
     "frame_sql",
     "run_func",
+    "engine_execute",
     "read_sql",
     "read_sql_query",
     "read_sql_table",
@@ -63,6 +64,12 @@ def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
             nb_trials, func.__module__, func.__name__
         )
     )
+
+
+def engine_execute(engine, sql, *args, **kwargs):
+    text_sql = sa.text(sql) if isinstance(sql, str) else sql
+    with engine.begin() as conn:
+        return conn.execute(text_sql, *args, **kwargs)
 
 
 def read_sql(
@@ -126,7 +133,7 @@ def read_sql(
 
     res = run_func(
         pd.read_sql,
-        sql,
+        sa.text(sql) if isinstance(sql, str) else sql,
         engine,
         index_col=index_col,
         chunksize=chunksize,
@@ -199,10 +206,11 @@ def read_sql_query(
     --------
     pandas.read_sql_query
     """
+    text_sql = sa.text(sql) if isinstance(sql, str) else sql
     if index_col is None or not set_index_after:
         return run_func(
             pd.read_sql_query,
-            sql,
+            text_sql,
             engine,
             index_col=index_col,
             nb_trials=nb_trials,
@@ -210,7 +218,12 @@ def read_sql_query(
             **kwargs
         )
     df = run_func(
-        pd.read_sql_query, sql, engine, nb_trials=nb_trials, logger=logger, **kwargs
+        pd.read_sql_query,
+        text_sql,
+        engine,
+        nb_trials=nb_trials,
+        logger=logger,
+        **kwargs
     )
     return df.set_index(index_col, drop=True)
 
@@ -261,8 +274,9 @@ def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
         logger for debugging
 
     """
+
     return run_func(
-        engine.execute, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs
+        engine_execute, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs
     )
 
 

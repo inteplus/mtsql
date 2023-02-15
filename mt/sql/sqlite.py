@@ -6,7 +6,14 @@ import sqlalchemy as sa
 
 from mt import path, logg
 
-from .base import frame_sql, list_tables, exec_sql, read_sql, read_sql_query
+from .base import (
+    frame_sql,
+    list_tables,
+    exec_sql,
+    read_sql,
+    read_sql_query,
+    engine_execute,
+)
 
 
 __all__ = [
@@ -235,7 +242,7 @@ def make_index(
             index_col=index_col,
         )
     )
-    engine.execute(query_str)
+    engine_execute(engine, query_str)
     return True
 
 
@@ -247,7 +254,7 @@ def vacuum(engine):
     engine : sqlalchemy.engine.Engine
         connection engine to an sqlite3 database
     """
-    engine.execute("VACUUM;")
+    engine_execute(engine, "VACUUM;")
 
 
 def integrity_check(engine):
@@ -259,7 +266,7 @@ def integrity_check(engine):
         connection engine to an sqlite3 database
     """
     query_str = "pragma integrity_check;"
-    return engine.execute(query_str)
+    return engine_execute(engine, query_str)
 
 
 def clone_database(src_filepath, dst_filepath, logger=None):
@@ -292,15 +299,18 @@ def clone_database(src_filepath, dst_filepath, logger=None):
             logger.info("Src filepath: {}".format(src_filepath))
             logger.info("Dst filepath: {}".format(dst_filepath))
 
-        src_engine.execute("ATTACH DATABASE '{}' AS other;".format(dst_filepath))
+        src_engine_execute(
+            engine, "ATTACH DATABASE '{}' AS other;".format(dst_filepath)
+        )
 
         for table_name in l_tableNames:
             if logger:
                 logger.info("Table: {}".format(table_name))
-            src_engine.execute(
+            src_engine_execute(
+                engine,
                 "INSERT INTO other.{table_name} SELECT * FROM main.{table_name};".format(
                     table_name=table_name
-                )
+                ),
             )
 
-        src_engine.execute("DETACH other;")
+        src_engine_execute(engine, "DETACH other;")
