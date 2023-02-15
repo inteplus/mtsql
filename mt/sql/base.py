@@ -7,12 +7,13 @@ import sqlalchemy.exc as se
 import psycopg2 as ps
 from halo import Halo
 
-from mt import pd
+from mt import pd, ctx
 
 
 __all__ = [
     "frame_sql",
     "run_func",
+    "conn_ctx",
     "engine_execute",
     "read_sql",
     "read_sql_query",
@@ -66,9 +67,15 @@ def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
     )
 
 
+def conn_ctx(engine):
+    if isinstance(engine, sa.engine.Engine):
+        return engine.begin()
+    return ctx.nullcontext(engine)
+
+
 def engine_execute(engine, sql, *args, **kwargs):
     text_sql = sa.text(sql) if isinstance(sql, str) else sql
-    with engine.begin() as conn:
+    with conn_ctx(engine) as conn:
         return conn.execute(text_sql, *args, **kwargs)
 
 
@@ -133,23 +140,11 @@ def read_sql(
 
     text_sql = sa.text(sql) if isinstance(sql, str) else sql
 
-    if isinstance(engine, sqlalchemy.engine.Engine):
-        with engine.begin() as conn:
-            res = run_func(
-                pd.read_sql,
-                text_sql,
-                conn,
-                index_col=index_col,
-                chunksize=chunksize,
-                nb_trials=nb_trials,
-                logger=logger,
-                **kwargs
-            )
-    else:
+    with conn_ctx(engine) as conn:
         res = run_func(
             pd.read_sql,
             text_sql,
-            engine,
+            conn,
             index_col=index_col,
             chunksize=chunksize,
             nb_trials=nb_trials,
@@ -232,21 +227,11 @@ def read_sql_query(
             logger=logger,
             **kwargs
         )
-    if isinstance(engine, sa.engine.Engine):
-        with engine.begin() as conn:
-            df = run_func(
-                pd.read_sql_query,
-                text_sql,
-                conn,
-                nb_trials=nb_trials,
-                logger=logger,
-                **kwargs
-            )
-    else:
+    with conn_ctx(engine) as conn:
         df = run_func(
             pd.read_sql_query,
             text_sql,
-            engine,
+            conn,
             nb_trials=nb_trials,
             logger=logger,
             **kwargs
