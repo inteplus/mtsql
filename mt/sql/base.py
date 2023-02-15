@@ -131,16 +131,31 @@ def read_sql(
         ts = pd.Timestamp.now()
         cnt = 0
 
-    res = run_func(
-        pd.read_sql,
-        sa.text(sql) if isinstance(sql, str) else sql,
-        engine,
-        index_col=index_col,
-        chunksize=chunksize,
-        nb_trials=nb_trials,
-        logger=logger,
-        **kwargs
-    )
+    text_sql = sa.text(sql) if isinstance(sql, str) else sql
+
+    if isinstance(engine, sqlalchemy.engine.Engine):
+        with engine.begin() as conn:
+            res = run_func(
+                pd.read_sql,
+                text_sql,
+                conn,
+                index_col=index_col,
+                chunksize=chunksize,
+                nb_trials=nb_trials,
+                logger=logger,
+                **kwargs
+            )
+    else:
+        res = run_func(
+            pd.read_sql,
+            text_sql,
+            engine,
+            index_col=index_col,
+            chunksize=chunksize,
+            nb_trials=nb_trials,
+            logger=logger,
+            **kwargs
+        )
 
     if chunksize is None:
         return res
@@ -217,14 +232,25 @@ def read_sql_query(
             logger=logger,
             **kwargs
         )
-    df = run_func(
-        pd.read_sql_query,
-        text_sql,
-        engine,
-        nb_trials=nb_trials,
-        logger=logger,
-        **kwargs
-    )
+    if isinstance(engine, sa.engine.Engine):
+        with engine.begin() as conn:
+            df = run_func(
+                pd.read_sql_query,
+                text_sql,
+                conn,
+                nb_trials=nb_trials,
+                logger=logger,
+                **kwargs
+            )
+    else:
+        df = run_func(
+            pd.read_sql_query,
+            text_sql,
+            engine,
+            nb_trials=nb_trials,
+            logger=logger,
+            **kwargs
+        )
     return df.set_index(index_col, drop=True)
 
 
