@@ -8,6 +8,7 @@ import psycopg2 as ps
 from halo import Halo
 
 from mt import pd, ctx
+from mt.base import deprecated_func
 
 
 __all__ = [
@@ -16,7 +17,6 @@ __all__ = [
     "conn_ctx",
     "engine_execute",
     "read_sql",
-    "read_sql_query",
     "read_sql_table",
     "exec_sql",
     "list_schemas",
@@ -91,9 +91,9 @@ def read_sql(
 ) -> pd.DataFrame:
     """Read an SQL query with a number of trials to overcome OperationalError.
 
-    The function wraps :func:`pandas.read_sql`. However, when `chunksize` is not None, it iterates
-    over chunks and concatenate them. In addition, if `logger` is not None, a progress bar is shown
-    in that case.
+    The function wraps :func:`pandas.read_sql_query`. However, when `chunksize` is not None, it
+    iterates over chunks and concatenates them. In addition, if `logger` is not None, a progress
+    bar is shown in that case.
 
     A dataframe is always returned.
 
@@ -104,7 +104,7 @@ def read_sql(
     engine : sqlalchemy.engine.Engine
         connection engine to the server
     index_col: string or list of strings, optional, default: None
-        Column(s) to set as index(MultiIndex). Passed as-is to :func:`pandas.read_sql`.
+        Column(s) to set as index(MultiIndex). Passed as-is to :func:`pandas.read_sql_query`.
     chunksize : int, default None
         If specified, iteratively reads a number of `chunksize` rows. In this case, a progress bar
         is also shown if `logger` is provided.
@@ -119,7 +119,7 @@ def read_sql(
     logger: logging.Logger or None
         logger for debugging
     kwargs: dict
-        other keyword arguments to be passed directly to :func:`pandas.read_sql`
+        other keyword arguments to be passed directly to :func:`pandas.read_sql_query`
 
     Returns
     -------
@@ -128,7 +128,7 @@ def read_sql(
 
     See Also
     --------
-    pandas.read_sql
+    pandas.read_sql_query
     """
 
     if chunksize is not None:
@@ -184,6 +184,12 @@ def read_sql(
     return df
 
 
+@deprecated_func(
+    "1.0",
+    suggested_func="mt.sql.base.read_sql",
+    removed_version="2.0",
+    docstring_prefix="    ",
+)
 def read_sql_query(
     sql,
     engine,
@@ -204,7 +210,8 @@ def read_sql_query(
     index_col: string or list of strings, optional, default: None
         Column(s) to set as index(MultiIndex). See :func:`pandas.read_sql_query`.
     set_index_after: bool
-        whether to set index specified by index_col via the pandas.read_sql_query() function or after the function has been invoked
+        whether to set index specified by index_col via the pandas.read_sql_query() function or
+        after the function has been invoked
     nb_trials: int
         number of query trials
     logger: logging.Logger or None
@@ -216,26 +223,18 @@ def read_sql_query(
     --------
     pandas.read_sql_query
     """
-    text_sql = sa.text(sql) if isinstance(sql, str) else sql
+
+    df = read_sql(
+        sql,
+        engine,
+        index_col=index_col,
+        nb_trials=nb_trials,
+        exception_handling="raise",
+        logger=logger,
+        **kwargs
+    )
     if index_col is None or not set_index_after:
-        return run_func(
-            pd.read_sql_query,
-            text_sql,
-            engine,
-            index_col=index_col,
-            nb_trials=nb_trials,
-            logger=logger,
-            **kwargs
-        )
-    with conn_ctx(engine) as conn:
-        df = run_func(
-            pd.read_sql_query,
-            text_sql,
-            conn,
-            nb_trials=nb_trials,
-            logger=logger,
-            **kwargs
-        )
+        return df
     return df.set_index(index_col, drop=True)
 
 
