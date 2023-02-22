@@ -139,7 +139,7 @@ def read_sql(
     """
 
     if isinstance(sql, str):
-        text_sql = text_sql
+        text_sql = sql
         sql = sa.text(text_sql)
     else:
         text_sql = str(sql.compile(compile_kwargs={"literal_binds": True}))
