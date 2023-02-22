@@ -79,6 +79,12 @@ def engine_execute(engine, sql, *args, **kwargs):
         return conn.execute(text_sql, *args, **kwargs)
 
 
+def trim_sql_query(sql_query: str) -> str:
+    sql_query = " ".join(sql_query.splitlines())
+    sql_query = " ".join(sql_query.split())
+    return sql_query
+
+
 def read_sql(
     sql,
     engine,
@@ -99,8 +105,9 @@ def read_sql(
 
     Parameters
     ----------
-    sql : str
-        SQL query to be executed
+    sql : str or object
+        SQL query to be executed. The query can be a string or an sqlalchemy object that can be
+        used for querying. Passed as-is to :func:`pandas.read_sql_query`.
     engine : sqlalchemy.engine.Engine
         connection engine to the server
     index_col: string or list of strings, optional, default: None
@@ -131,19 +138,24 @@ def read_sql(
     pandas.read_sql_query
     """
 
+    if isinstance(sql, str):
+        text_sql = text_sql
+        sql = sa.text(text_sql)
+    else:
+        text_sql = str(sql.compile(compile_kwargs={"literal_binds": True}))
+    text_sql = trim_sql_query(text_sql)
+
     if chunksize is not None:
-        s = "read_sql: '{}'".format(sql)
+        s = "read_sql: '{}'".format(text_sql)
         spinner = Halo(s, spinner="dots", enabled=bool(logger))
         spinner.start()
         ts = pd.Timestamp.now()
         cnt = 0
 
-    text_sql = sa.text(sql) if isinstance(sql, str) else sql
-
     with conn_ctx(engine) as conn:
         res = run_func(
             pd.read_sql,
-            text_sql,
+            sql,
             conn,
             index_col=index_col,
             chunksize=chunksize,
