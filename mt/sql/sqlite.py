@@ -11,7 +11,6 @@ from .base import (
     list_tables,
     exec_sql,
     read_sql,
-    read_sql_query,
     engine_execute,
 )
 
@@ -48,7 +47,7 @@ def list_schemas(engine, nb_trials: int = 3, logger=None):
         names and files
     """
     query_str = "PRAGMA database_list;"
-    return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    return read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
 def rename_table(
@@ -171,9 +170,7 @@ def get_table_sql_code(table_name, engine, nb_trials: int = 3, logger=None):
             table_name
         )
     )
-    return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)["sql"][
-        0
-    ]
+    return read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)["sql"][0]
 
 
 def list_indices(engine, nb_trials: int = 3, logger=None):
@@ -196,7 +193,7 @@ def list_indices(engine, nb_trials: int = 3, logger=None):
         that maps an indexed column of the table to an SQL query that defines the index.
     """
     query_str = "SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index';"
-    df = read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    df = read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
     res = {}
     for _, row in df.iterrows():
         table_name = row["tbl_name"]
