@@ -298,7 +298,7 @@ def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
     """
 
     return run_func(
-        engine_execute, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs
+        engine_execute, engine, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs
     )
 
 
