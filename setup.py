@@ -10,13 +10,13 @@ setup(
     author=["Minh-Tri Pham"],
     packages=find_packages() + find_namespace_packages(include=["mt.*"]),
     install_requires=[
-        "sqlalchemy>=1.4",  # for psql access
+        "sqlalchemy>=2.0",  # for psql access
         "tzlocal",  # for getting the local timezone
         "tqdm",  # for a nice progress bar
         "psycopg2-binary",  # for psql access
         # 'mysql', # for mysql access
-        "mtbase>=3.6",  # to have an updated mt.logg
-        "mtpandas>=0.5",  # to have dfload and dfsave
+        "mtbase>=4.1",  # just updating
+        "mtpandas>=1.1",  # just updating
     ],
     url="https://github.com/inteplus/mtsql",
     project_urls={
