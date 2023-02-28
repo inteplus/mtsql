@@ -383,7 +383,7 @@ def list_views(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=
                 schema
             )
         )
-    df = read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    df = pd.read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
     return df["viewname"].tolist()
 
 
@@ -813,9 +813,7 @@ def frame_exists(
     retval: bool
         whether a table or a view exists with the given name
     """
-    if frame_name in list_tables(
-        engine, schema=schema, nb_trials=nb_trials, logger=logger
-    ):
+    if frame_name in list_tables(engine, schema=schema):
         return True
     if frame_name in list_views(
         engine, schema=schema, nb_trials=nb_trials, logger=logger
