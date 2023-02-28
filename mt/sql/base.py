@@ -305,31 +305,23 @@ def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
 # ----- functions navigating the database -----
 
 
-def list_schemas(engine, nb_trials: int = 3, logger=None):
+def list_schemas(engine):
     """Lists all schemas.
 
     Parameters
     ----------
     engine : sqlalchemy.engine.Engine
         connection engine to the server
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
 
     Returns
     -------
     list
         list of all schema names
     """
-    return run_func(
-        sa.inspect, engine, nb_trials=nb_trials, logger=logger
-    ).get_schemas()
+    return sa.inspect(engine).get_schemas()
 
 
-def list_tables(
-    engine, schema: tp.Optional[str] = None, nb_trials: int = 3, logger=None
-):
+def list_tables(engine, schema: tp.Optional[str] = None):
     """Lists all tables of a given schema.
 
     Parameters
@@ -338,16 +330,10 @@ def list_tables(
         connection engine to the server
     schema: str, optional
         a valid schema name returned from :func:`list_schemas`. Default to sqlalchemy
-    nb_trials: int
-        number of query trials
-    logger: logging.Logger or None
-        logger for debugging
 
     Returns
     -------
     list
         list of all table names
     """
-    return run_func(
-        engine.table_names, schema=schema, nb_trials=nb_trials, logger=logger
-    )
+    return sa.inspect(engine).get_table_names(schema=schema)
