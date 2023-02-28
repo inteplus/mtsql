@@ -415,7 +415,7 @@ def list_matviews(
             schema
         )
     )
-    df = read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    df = read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
     return df["matviewname"].tolist()
 
 
@@ -504,7 +504,7 @@ def get_frame_length(
     The dataframe must exist.
     """
     frame_sql_str = frame_sql(frame_name, schema=schema)
-    return read_sql_query(
+    return read_sql(
         "SELECT COUNT(*) a FROM {};".format(frame_sql_str),
         engine,
         nb_trials=nb_trials,
@@ -538,7 +538,7 @@ def get_frame_dependencies(
     """.format(
         "public" if schema is None else schema, frame_name
     )
-    return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    return read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
 def get_view_sql_code(
@@ -564,7 +564,7 @@ def get_view_sql_code(
     retval: str
         SQL query string defining the view
     """
-    return read_sql_query(
+    return read_sql(
         "SELECT pg_get_viewdef('{}', true) a".format(
             frame_sql(view_name, schema=schema)
         ),
@@ -934,7 +934,7 @@ def list_columns_ext(
             schema, table_name
         )
 
-    return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    return read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
 def list_columns(
@@ -998,7 +998,7 @@ def list_primary_columns_ext(
         """.format(
         frame_sql_str
     )
-    return read_sql_query(query_str, engine, nb_trials=nb_trials, logger=logger)
+    return read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
 def list_primary_columns(
