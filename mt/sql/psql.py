@@ -439,7 +439,7 @@ def list_frames(engine, schema: Optional[str] = None, nb_trials: int = 3, logger
         list of all dataframes of types {'table', 'view', 'matview'}
     """
     data = []
-    for item in list_tables(engine, schema=schema, nb_trials=nb_trials, logger=logger):
+    for item in list_tables(engine, schema=schema):
         data.append((item, "table"))
     for item in list_views(engine, schema=schema, nb_trials=nb_trials, logger=logger):
         data.append((item, "view"))
@@ -853,9 +853,7 @@ def drop_frame(
     -------
     whatever exec_sql() returns, or False if the frame does not exist
     """
-    if frame_name in list_tables(
-        engine, schema=schema, nb_trials=nb_trials, logger=logger
-    ):
+    if frame_name in list_tables(engine, schema=schema):
         return drop_table(
             frame_name,
             engine,
@@ -1580,9 +1578,7 @@ def writesync_table(
 
         # remove redundant remote records
         id_list = diff_keys + remote_only_keys
-        if len(id_list) > 0 and table_name in list_tables(
-            engine_ro, schema=schema, nb_trials=nb_trials, logger=logger
-        ):
+        if len(id_list) > 0 and table_name in list_tables(engine_ro, schema=schema):
             if logger:
                 logger.debug("Removing {} keys.".format(len(id_list)))
             id_list = ",".join(str(x) for x in id_list)
