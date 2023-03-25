@@ -26,6 +26,7 @@ __all__ = [
     "rename_schema",
     "list_views",
     "list_matviews",
+    "list_foreign_tables",
     "list_frames",
     "list_all_frames",
     "get_frame_length",
@@ -185,7 +186,7 @@ def to_sql(
     if_exists="fail",
     nb_trials: int = 3,
     logger=None,
-    **kwargs
+    **kwargs,
 ):
     """Writes records stored in a DataFrame to an SQL database, with a number of trials to overcome OperationalError.
 
@@ -253,7 +254,7 @@ def to_sql(
                 index_label=None,
                 nb_trials=nb_trials,
                 logger=logger,
-                **kwargs
+                **kwargs,
             )
         retval = run_func(
             df.to_sql,
@@ -265,7 +266,7 @@ def to_sql(
             index_label=None,
             nb_trials=nb_trials,
             logger=logger,
-            **kwargs
+            **kwargs,
         )
         if if_exists == "replace":
             query_str = "ALTER TABLE {} ADD PRIMARY KEY ({});".format(
@@ -325,7 +326,7 @@ def to_sql(
         index_label=None,
         nb_trials=nb_trials,
         logger=logger,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -419,8 +420,37 @@ def list_matviews(
     return df["matviewname"].tolist()
 
 
+def list_foreign_tables(
+    engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None
+):
+    """Lists all foreign tables of a given schema.
+
+    Parameters
+    ----------
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy connection engine created by function `create_engine()`
+    schema: str or None
+        a valid schema name returned from `list_schemas()`
+    nb_trials: int
+        number of query trials
+    logger: logging.Logger or None
+        logger for debugging
+
+    Returns
+    -------
+    out: list
+        list of all materialized view names
+    """
+    if schema is None:
+        schema = "public"
+    query_str = f"SELECT foreign_table_name FROM information_schema.foreign_tables WHERE foreign_table_schema='{schema}';"
+
+    df = read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+    return df["matviewname"].tolist()
+
+
 def list_frames(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
-    """Lists all dataframes (tables/views/materialized views) of a given schema.
+    """Lists all dataframes (tables/views/materialized views/foreign tables) of a given schema.
 
     Parameters
     ----------
@@ -447,13 +477,17 @@ def list_frames(engine, schema: Optional[str] = None, nb_trials: int = 3, logger
         engine, schema=schema, nb_trials=nb_trials, logger=logger
     ):
         data.append((item, "matview"))
+    for item in list_foreign_tables(
+        engine, schema=schema, nb_trials=nb_trials, logger=logger
+    ):
+        data.append((item, "foreign_table"))
     return pd.DataFrame(data=data, columns=["name", "type"])
 
 
 def list_all_frames(
     engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None
 ):
-    """Lists all dataframes (tables/views/materialized views) across all schemas.
+    """Lists all dataframes (tables/views/materialized views/foreign tables) across all schemas.
 
     Parameters
     ----------
