@@ -446,7 +446,7 @@ def list_foreign_tables(
     query_str = f"SELECT foreign_table_name FROM information_schema.foreign_tables WHERE foreign_table_schema='{schema}';"
 
     df = read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
-    return df["matviewname"].tolist()
+    return df["foreign_table_name"].tolist()
 
 
 def list_frames(engine, schema: Optional[str] = None, nb_trials: int = 3, logger=None):
