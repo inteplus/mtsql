@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+import sqlalchemy as sa
 import re
 import psycopg2 as ps
 import sqlalchemy.exc as se
