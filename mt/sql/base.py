@@ -1,13 +1,11 @@
 """Base functions dealing with an SQL database."""
 
-import typing as tp
-
 import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg2 as ps
 from halo import Halo
 
-from mt import pd, ctx
+from mt import tp, logg, pd, ctx
 from mt.base import deprecated_func
 
 
@@ -31,7 +29,13 @@ def frame_sql(frame_name, schema: tp.Optional[str] = None):
 # ----- functions dealing with sql queries to overcome OperationalError -----
 
 
-def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
+def run_func(
+    func,
+    *args,
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+    **kwargs
+):
     """Attempt to run a function a number of times to overcome OperationalError exceptions.
 
     Parameters
@@ -42,7 +46,7 @@ def run_func(func, *args, nb_trials: int = 3, logger=None, **kwargs):
         arguments to be passed to the function
     nb_trials: int
         number of query trials
-    logger: logging.Logger or None
+    logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
     kwargs: dict
         keyword arguments to be passed to the function
@@ -92,7 +96,7 @@ def read_sql(
     chunksize: tp.Optional[int] = None,
     nb_trials: int = 3,
     exception_handling: str = "raise",
-    logger=None,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
     **kwargs
 ) -> pd.DataFrame:
     """Read an SQL query with a number of trials to overcome OperationalError.
@@ -123,7 +127,7 @@ def read_sql(
         download the result. Only valid when `chunksize` is provided. Right now there are only
         2 policies. Either to raise the exception as-is ('raise'), or to raise the exception as a
         warning ('warn') and return whatever has been downloaded.
-    logger: logging.Logger or None
+    logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
     kwargs: dict
         other keyword arguments to be passed directly to :func:`pandas.read_sql_query`
@@ -208,7 +212,7 @@ def read_sql_query(
     index_col=None,
     set_index_after=False,
     nb_trials: int = 3,
-    logger=None,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
     **kwargs
 ):
     """Read an SQL query with a number of trials to overcome OperationalError.
@@ -226,7 +230,7 @@ def read_sql_query(
         after the function has been invoked
     nb_trials: int
         number of query trials
-    logger: logging.Logger or None
+    logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
     kwargs: dict
         other keyword arguments to be passed directly to :func:`pandas.read_sql_query`
@@ -250,7 +254,13 @@ def read_sql_query(
     return df.set_index(index_col, drop=True)
 
 
-def read_sql_table(table_name, engine, nb_trials: int = 3, logger=None, **kwargs):
+def read_sql_table(
+    table_name,
+    engine,
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+    **kwargs
+):
     """Read an SQL table with a number of trials to overcome OperationalError.
 
     Parameters
@@ -261,7 +271,7 @@ def read_sql_table(table_name, engine, nb_trials: int = 3, logger=None, **kwargs
         connection engine to the server
     nb_trials: int
         number of query trials
-    logger: logging.Logger or None
+    logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
 
     See Also
@@ -279,8 +289,15 @@ def read_sql_table(table_name, engine, nb_trials: int = 3, logger=None, **kwargs
     )
 
 
-def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
-    """Execute an SQL query with a number of trials to overcome OperationalError. See :func:`sqlalchemy.engine.Engine.execute` for more details.
+def exec_sql(
+    sql,
+    engine,
+    *args,
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+    **kwargs
+):
+    """Execute an SQL query with a number of trials to overcome OperationalError.
 
     Parameters
     ----------
@@ -292,9 +309,13 @@ def exec_sql(sql, engine, *args, nb_trials: int = 3, logger=None, **kwargs):
         positional arguments to be passed as-is to :func:`sqlalchemy.engine.Engine.execute`
     nb_trials: int
         number of query trials
-    logger: logging.Logger or None
+    logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
 
+    See Also
+    --------
+    sqlalchemy.engine.Engine.execute
+        for more details
     """
 
     return run_func(
