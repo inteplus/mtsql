@@ -32,6 +32,7 @@ __all__ = [
     "get_frame_dependencies",
     "get_view_sql_code",
     "rename_table",
+    "vacuum_table",
     "drop_table",
     "rename_view",
     "drop_view",
@@ -703,11 +704,43 @@ def rename_table(
     whatever exec_sql() returns
     """
     frame_sql_str = frame_sql(old_table_name, schema=schema)
-    exec_sql(
+    return exec_sql(
         'ALTER TABLE {} RENAME TO "{}";'.format(frame_sql_str, new_table_name),
         engine,
         nb_trials=nb_trials,
         logger=logger,
+    )
+
+
+def vacuum_table(
+    table_name,
+    engine,
+    schema: tp.Optional[str] = None,
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+):
+    """Vacuums a table of a schema.
+
+    Parameters
+    ----------
+    table_name: str
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy connection engine created by function `create_engine()`
+    schema: str or None
+        a valid schema name returned from `list_schemas()`
+    nb_trials: int
+        number of query trials
+    logger: mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+
+    Returns
+    -------
+    whatever exec_sql() returns
+    """
+    frame_sql_str = frame_sql(table_name, schema=schema)
+    engine2 = engine.execution_options(isolation_level="AUTOCOMMIT")
+    return exec_sql(
+        f"VACUUM {frame_sql_str};", engine2, nb_trials=nb_trials, logger=logger
     )
 
 
