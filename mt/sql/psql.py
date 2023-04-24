@@ -890,7 +890,7 @@ def rename_matview(
     )
 
 
-def refreesh_matview(
+def refresh_matview(
     matview_name,
     engine,
     schema: tp.Optional[str] = None,
