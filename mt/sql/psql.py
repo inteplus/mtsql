@@ -558,7 +558,7 @@ def list_all_frames(
         list of all dataframes of types {'table', 'view', 'matview'}
     """
     dfs = []
-    for schema in list_schemas(engine, nb_trials=nb_trials, logger=logger):
+    for schema in list_schemas(engine):
         df = list_frames(engine, schema=schema, nb_trials=nb_trials, logger=logger)
         if len(df) > 0:
             df["schema"] = schema
