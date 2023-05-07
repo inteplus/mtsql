@@ -339,7 +339,7 @@ def list_schemas(engine):
     list
         list of all schema names
     """
-    return sa.inspect(engine).get_schemas()
+    return sa.inspect(engine).get_schema_names()
 
 
 def list_tables(engine, schema: tp.Optional[str] = None):
