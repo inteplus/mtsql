@@ -6,10 +6,8 @@ import psycopg2 as ps
 import sqlalchemy.exc as se
 from tqdm import tqdm  # nice progress bar
 
-from mt import tp, logg, pd, np
-import mt.base.path as _p
+from mt import tp, logg, pd, np, path, ctx
 from mt.base.bg_invoke import BgInvoke
-from mt.base.with_utils import dummy_scope
 
 from .base import *
 
@@ -18,7 +16,6 @@ __all__ = [
     "pg_get_locked_transactions",
     "pg_cancel_backend",
     "pg_cancel_all_backends",
-    "pg_get_dependent_frames",
     "indices",
     "compliance_check",
     "as_column_name",
@@ -117,33 +114,6 @@ def pg_cancel_all_backends(
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
     """Cancels all backend transactions.
-
-    Parameters
-    ----------
-    engine: sqlalchemy.engine.Engine
-        connection engine
-    schema: str or None
-        If None, then all schemas are considered and not just the public schema. Else, scope down
-        to a single schema.
-    logger: mt.logg.IndentedLoggerAdapter, optional
-        logger for debugging
-    """
-    df = pg_get_locked_transactions(engine, schema=schema)
-    pids = df["pid"].drop_duplicates().tolist()
-    for pid in pids:
-        if logger:
-            logger.info("Cancelling backend pid {}".format(pid))
-        pg_cancel_backend(engine, pid)
-
-
-def pg_get_dependent_frames(
-    engine,
-    schema: tp.Optional[str] = None,
-    frame_name: tp.Optional[str] = None,
-    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-):
-    # MT-TODO: continue from here
-    """Gets all dependent frames for a given frame, a given schema, or everything.
 
     Parameters
     ----------
@@ -1401,13 +1371,13 @@ def comparesync_table(
             df_filepath, frame_sql_str
         ),
         curly=False,
-    ) if logger else dummy_scope:
+    ) if logger else ctx.nullcontext():
         # make sure the folder containing the CSV file exists
-        data_dir = _p.dirname(df_filepath)
-        _p.make_dirs(data_dir)
+        data_dir = path.dirname(df_filepath)
+        path.make_dirs(data_dir)
 
         # local_df
-        if _p.exists(df_filepath):
+        if path.exists(df_filepath):
             try:
                 if df_filepath.endswith(".parquet"):
                     local_df = pd.dfload(df_filepath, show_progress=True)
@@ -1468,7 +1438,7 @@ def comparesync_table(
 
             with logger.scoped_debug(
                 "Range of '{}'".format(id_name), curly=False
-            ) if logger else dummy_scope:
+            ) if logger else ctx.nullcontext():
                 qsql = "SELECT min({}) AS val FROM ({}) ct_t0".format(
                     id_name, query_str
                 )
@@ -1677,7 +1647,7 @@ def writesync_table(
     with logger.scoped_debug(
         "Writing table: local '{}' -> remote '{}'".format(df_filepath, frame_sql_str),
         curly=False,
-    ) if logger else dummy_scope:
+    ) if logger else ctx.nullcontext():
         (
             local_df,
             remote_md5_df,
@@ -1920,7 +1890,7 @@ def readsync_table(
     with logger.scoped_debug(
         "Reading table: local '{}' <- remote '{}'".format(df_filepath, frame_sql_str),
         curly=False,
-    ) if logger else dummy_scope:
+    ) if logger else ctx.nullcontext():
         (
             local_df,
             remote_md5_df,
