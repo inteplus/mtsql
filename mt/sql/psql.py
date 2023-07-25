@@ -18,6 +18,7 @@ __all__ = [
     "pg_get_locked_transactions",
     "pg_cancel_backend",
     "pg_cancel_all_backends",
+    "pg_get_dependent_frames",
     "indices",
     "compliance_check",
     "as_column_name",
@@ -116,6 +117,33 @@ def pg_cancel_all_backends(
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
     """Cancels all backend transactions.
+
+    Parameters
+    ----------
+    engine: sqlalchemy.engine.Engine
+        connection engine
+    schema: str or None
+        If None, then all schemas are considered and not just the public schema. Else, scope down
+        to a single schema.
+    logger: mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+    """
+    df = pg_get_locked_transactions(engine, schema=schema)
+    pids = df["pid"].drop_duplicates().tolist()
+    for pid in pids:
+        if logger:
+            logger.info("Cancelling backend pid {}".format(pid))
+        pg_cancel_backend(engine, pid)
+
+
+def pg_get_dependent_frames(
+    engine,
+    schema: tp.Optional[str] = None,
+    frame_name: tp.Optional[str] = None,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+):
+    # MT-TODO: continue from here
+    """Gets all dependent frames for a given frame, a given schema, or everything.
 
     Parameters
     ----------
