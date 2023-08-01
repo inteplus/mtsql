@@ -4,7 +4,7 @@ import sqlalchemy as sa
 import re
 import psycopg2 as ps
 import sqlalchemy.exc as se
-from tqdm import tqdm  # nice progress bar
+from tqdm.auto import tqdm  # nice progress bar
 
 from mt import tp, logg, pd, np, path, ctx
 from mt.base.bg_invoke import BgInvoke
