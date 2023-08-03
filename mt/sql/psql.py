@@ -714,6 +714,7 @@ def vacuum_table(
     table_name,
     engine,
     schema: tp.Optional[str] = None,
+    full: bool = False,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
@@ -726,6 +727,8 @@ def vacuum_table(
         an sqlalchemy connection engine created by function `create_engine()`
     schema: str or None
         a valid schema name returned from `list_schemas()`
+    full : bool
+        whether or not to do a full vacuuming
     nb_trials: int
         number of query trials
     logger: mt.logg.IndentedLoggerAdapter, optional
@@ -737,9 +740,11 @@ def vacuum_table(
     """
     frame_sql_str = frame_sql(table_name, schema=schema)
     engine2 = engine.execution_options(isolation_level="AUTOCOMMIT")
-    return exec_sql(
-        f"VACUUM {frame_sql_str};", engine2, nb_trials=nb_trials, logger=logger
-    )
+    if full:
+        stmt = f"VACUUM FULL {frame_sql_str};"
+    else:
+        stmt = f"VACUUM {frame_sql_str};"
+    return exec_sql(stmt, engine2, nb_trials=nb_trials, logger=logger)
 
 
 def drop_table(
