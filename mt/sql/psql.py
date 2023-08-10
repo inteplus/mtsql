@@ -1326,11 +1326,9 @@ def make_primary(
         table_name, engine, schema=schema, nb_trials=nb_trials, logger=logger
     ):
         if schema is None:
-            s = "Table or view with name '{}' does not exists.".format(table_name)
+            s = f"Table or view with name '{table_name}' does not exists."
         else:
-            s = "Table or view with name '{}' from schema '{}' does not exists.".format(
-                table_name, schema
-            )
+            s = f"Table or view with name '{table_name}' from schema '{schema}' does not exists."
         raise ps.ProgrammingError(s)
 
     frame_sql_str = frame_sql(table_name, schema=schema)
@@ -1347,7 +1345,7 @@ def make_primary(
 
     msg = f"Making {column_str} of {frame_sql_str} primary..."
     logg.info(msg, logger=logger)
-    query_str = """
+    query_str = f"""
         ALTER TABLE {frame_sql_str} ADD PRIMARY KEY ({column_str})
     ;"""
     exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
