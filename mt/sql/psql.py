@@ -45,6 +45,7 @@ __all__ = [
     "list_primary_columns",
     "rename_column",
     "drop_column",
+    "make_primary",
     "comparesync_table",
     "readsync_table",
     "writesync_table",
@@ -1293,6 +1294,62 @@ def drop_column(
         query_str = 'ALTER TABLE "{}"."{}" DROP COLUMN "{}";'.format(
             schema, table_name, column_name
         )
+    exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+
+
+def make_primary(
+    table_name: str,
+    l_columns: list,
+    engine,
+    schema: tp.Optional[str] = None,
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+):
+    """Removes all duplicate records from an unindexed table based on a list of keys and then make the keys primary.
+
+    Parameters
+    ----------
+    table_name: str
+        a valid table name returned from `list_tables()`
+    l_columns: list,
+        list of columns to be made as primary keys
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy connection engine created by function `create_engine()`
+    schema: str or None
+        a valid schema name returned from `list_schemas()`
+    nb_trials: int
+        number of query trials
+    logger: mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+    """
+    if not frame_exists(
+        table_name, engine, schema=schema, nb_trials=nb_trials, logger=logger
+    ):
+        if schema is None:
+            s = "Table or view with name '{}' does not exists.".format(table_name)
+        else:
+            s = "Table or view with name '{}' from schema '{}' does not exists.".format(
+                table_name, schema
+            )
+        raise ps.ProgrammingError(s)
+
+    frame_sql_str = frame_sql(table_name, schema=schema)
+    column_str = ", ".join(l_columns)
+    msg = f"Deleting duplicates from {frame_sql_str} distinct on {column_str}..."
+    logg.info(msg, logger=logger)
+    query_str = f"""
+        DELETE FROM {frame_sql_str}
+          WHERE ctid IN (
+            SELECT ctid FROM {frame_sql_str}
+            EXCEPT SELECT MIN(ctid) FROM {frame_sql_str} GROUP BY {column_str}
+    );"""
+    exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+
+    msg = f"Making {column_str} of {frame_sql_str} primary..."
+    logg.info(msg, logger=logger)
+    query_str = """
+        ALTER TABLE {frame_sql_str} ADD PRIMARY KEY ({column_str})
+    ;"""
     exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
