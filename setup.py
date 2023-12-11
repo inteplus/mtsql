@@ -10,7 +10,7 @@ setup(
     author=["Minh-Tri Pham"],
     packages=find_packages() + find_namespace_packages(include=["mt.*"]),
     install_requires=[
-        "sqlalchemy>=2.0",  # for psql access
+        "sqlalchemy",  # for psql access
         "tzlocal",  # for getting the local timezone
         "tqdm",  # for a nice progress bar
         "psycopg2-binary",  # for psql access
