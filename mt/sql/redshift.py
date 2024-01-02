@@ -463,11 +463,10 @@ def to_sql(
 
     Notes
     -----
-    Redshift does not have primary keys. One uses sortKey() to provide indexing. This function
-    attempts to fix that problem. It takes as input a PSQL-compliant dataframe
-    (see `compliance_check()`). It ignores any input `index` or `index_label` keyword. Instead, it
-    considers 2 cases. If the dataframe's has an index or indices, then the tuple of all indices is
-    turned into the primary key. If not, there is no primary key and no index is uploaded.
+    The function takes as input a PSQL-compliant dataframe (see `compliance_check()`). It ignores
+    any input `index` or `index_label` keyword. Instead, it considers 2 cases. If the dataframe has
+    an index or indices, then the tuple of all indices is turned into the primary key. If not,
+    there is no primary key and no index is uploaded.
 
     See Also
     --------
@@ -509,7 +508,7 @@ def to_sql(
         )
 
         query_str = (
-            f"ALTER TABLE {frame_sql_str} ALTER SORTKEY ({','.join(local_indices)});"
+            f"ALTER TABLE {frame_sql_str} ADD PRIMARY KEY ({','.join(local_indices)});"
         )
         exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
     else:
