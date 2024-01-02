@@ -11,6 +11,7 @@ from mt.base import deprecated_func
 
 __all__ = [
     "frame_sql",
+    "indices",
     "run_func",
     "conn_ctx",
     "engine_execute",
@@ -19,11 +20,19 @@ __all__ = [
     "exec_sql",
     "list_schemas",
     "list_tables",
+    "list_views",
+    "table_exists",
 ]
 
 
 def frame_sql(frame_name, schema: tp.Optional[str] = None):
     return frame_name if schema is None else "{}.{}".format(schema, frame_name)
+
+
+def indices(df):
+    """Returns the list of named indices of the dataframe, ignoring any unnamed index."""
+    a = list(df.index.names)
+    return a if a != [None] else []
 
 
 # ----- functions dealing with sql queries to overcome OperationalError -----
@@ -200,60 +209,6 @@ def read_sql(
     return df
 
 
-@deprecated_func(
-    "1.0",
-    suggested_func="mt.sql.base.read_sql",
-    removed_version="2.0",
-    docstring_prefix="    ",
-)
-def read_sql_query(
-    sql,
-    engine,
-    index_col=None,
-    set_index_after=False,
-    nb_trials: int = 3,
-    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs
-):
-    """Read an SQL query with a number of trials to overcome OperationalError.
-
-    Parameters
-    ----------
-    sql : str
-        SQL query to be executed
-    engine : sqlalchemy.engine.Engine
-        connection engine to the server
-    index_col: string or list of strings, optional, default: None
-        Column(s) to set as index(MultiIndex). See :func:`pandas.read_sql_query`.
-    set_index_after: bool
-        whether to set index specified by index_col via the pandas.read_sql_query() function or
-        after the function has been invoked
-    nb_trials: int
-        number of query trials
-    logger: mt.logg.IndentedLoggerAdapter, optional
-        logger for debugging
-    kwargs: dict
-        other keyword arguments to be passed directly to :func:`pandas.read_sql_query`
-
-    See Also
-    --------
-    pandas.read_sql_query
-    """
-
-    df = read_sql(
-        sql,
-        engine,
-        index_col=index_col,
-        nb_trials=nb_trials,
-        exception_handling="raise",
-        logger=logger,
-        **kwargs
-    )
-    if index_col is None or not set_index_after:
-        return df
-    return df.set_index(index_col, drop=True)
-
-
 def read_sql_table(
     table_name,
     engine,
@@ -358,3 +313,46 @@ def list_tables(engine, schema: tp.Optional[str] = None):
         list of all table names
     """
     return sa.inspect(engine).get_table_names(schema=schema)
+
+
+def list_views(engine, schema: tp.Optional[str] = None):
+    """Lists all views of a given schema.
+
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.Engine
+        connection engine to the server
+    schema: str, optional
+        a valid schema name returned from :func:`list_schemas`. Default to sqlalchemy
+
+    Returns
+    -------
+    list
+        list of all view names
+    """
+    return sa.inspect(engine).get_view_names(schema=schema)
+
+
+def table_exists(
+    table_name,
+    engine,
+    schema: tp.Optional[str] = None,
+):
+    """Checks if a table exists.
+
+    Parameters
+    ----------
+    table_name: str
+        name of table
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy connection engine created by function `create_engine()`
+    schema: str or None
+        a valid schema name returned from `list_schemas()`
+
+    Returns
+    -------
+    retval: bool
+        whether a table or a view exists with the given name
+    """
+
+    return sa.inspect(engine).has_table(table_name, schema=schema)

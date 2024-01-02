@@ -3,6 +3,7 @@
 from mt import tp, logg
 
 from .base import *
+from .psql import compliance_check
 
 
 __api__ = [
@@ -418,3 +419,111 @@ def drop_column(
             schema, table_name, column_name
         )
     exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+
+
+# ----- functions dealing with sql queries to overcome OperationalError -----
+
+
+def to_sql(
+    df,
+    name,
+    engine,
+    schema: tp.Optional[str] = None,
+    if_exists="fail",
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+    **kwargs,
+):
+    """Writes records stored in a DataFrame to a Redshift database.
+
+    With a number of trials to overcome OperationalError.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        dataframe to be sent to the server
+    name : str
+        name of the table to be written to
+    engine : sqlalchemy.engine.Engine
+        connection engine to the server
+    schema: string, optional
+        Specify the schema. If None, use default schema.
+    if_exists: str
+        what to do when the table exists. Passed as-is to :func:`pandas.DataFrame.to_sql`.
+    nb_trials: int
+        number of query trials
+    logger: mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+    kwargs : dict
+        keyword arguments passed as-is to :func:`pandas.DataFrame.to_sql`
+
+    Raises
+    ------
+    sqlalchemy.exc.ProgrammingError if the local and remote frames do not have the same structure
+
+    Notes
+    -----
+    Redshift does not have primary keys. One uses sortKey() to provide indexing. This function
+    attempts to fix that problem. It takes as input a PSQL-compliant dataframe
+    (see `compliance_check()`). It ignores any input `index` or `index_label` keyword. Instead, it
+    considers 2 cases. If the dataframe's has an index or indices, then the tuple of all indices is
+    turned into the primary key. If not, there is no primary key and no index is uploaded.
+
+    See Also
+    --------
+    pandas.DataFrame.to_sql()
+
+    """
+
+    if kwargs:
+        if "index" in kwargs:
+            raise ValueError(
+                "The `mt.sql.psql.to_sql()` function does not accept `index` as a keyword."
+            )
+        if "index_label" in kwargs:
+            raise ValueError(
+                "This `mt.sql.psql.to_sql()` function does not accept `index_label` as a keyword."
+            )
+
+    compliance_check(df)
+    frame_sql_str = frame_sql(name, schema=schema)
+
+    # if the remote frame does not exist, force `if_exists` to 'replace'
+    if not table_exists(name, engine, schema=schema):
+        if_exists = "replace"
+    local_indices = indices(df)
+
+    if local_indices:
+        df = df.reset_index(drop=False)
+        retval = run_func(
+            df.to_sql,
+            name,
+            engine,
+            schema=schema,
+            if_exists=if_exists,
+            index=False,
+            index_label=None,
+            nb_trials=nb_trials,
+            logger=logger,
+            **kwargs,
+        )
+
+        query_str = (
+            f"ALTER TABLE {frame_sql_str} ALTER SORTKEY ({','.join(local_indices)});"
+        )
+        exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+    else:
+        retval = run_func(
+            df.to_sql,
+            name,
+            engine,
+            schema=schema,
+            if_exists=if_exists,
+            index=False,
+            index_label=None,
+            nb_trials=nb_trials,
+            logger=logger,
+            **kwargs,
+        )
+
+    return retval

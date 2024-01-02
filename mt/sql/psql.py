@@ -16,12 +16,10 @@ __all__ = [
     "pg_get_locked_transactions",
     "pg_cancel_backend",
     "pg_cancel_all_backends",
-    "indices",
     "compliance_check",
     "as_column_name",
     "to_sql",
     "rename_schema",
-    "list_views",
     "list_matviews",
     "list_foreign_tables",
     "list_frames",
@@ -137,12 +135,6 @@ def pg_cancel_all_backends(
 # ----- functions dealing with sql queries to overcome OperationalError -----
 
 
-def indices(df):
-    """Returns the list of named indices of the dataframe, ignoring any unnamed index."""
-    a = list(df.index.names)
-    return a if a != [None] else []
-
-
 def compliance_check(df: pd.DataFrame):
     """Checks if a dataframe is compliant to PSQL.
 
@@ -207,7 +199,7 @@ def to_sql(
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
     **kwargs,
 ):
-    """Writes records stored in a DataFrame to an SQL database.
+    """Writes records stored in a DataFrame to a PostgreSQL database.
 
     With a number of trials to overcome OperationalError.
 
@@ -391,42 +383,6 @@ def rename_schema(
     )
 
 
-def list_views(
-    engine,
-    schema: tp.Optional[str] = None,
-    nb_trials: int = 3,
-    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-):
-    """Lists all views of a given schema.
-
-    Parameters
-    ----------
-    engine: sqlalchemy.engine.Engine
-        an sqlalchemy connection engine created by function `create_engine()`
-    schema: str or None
-        a valid schema name returned from `list_schemas()`
-    nb_trials: int
-        number of query trials
-    logger: mt.logg.IndentedLoggerAdapter, optional
-        logger for debugging
-
-    Returns
-    -------
-    out: list
-        list of all view names
-    """
-    if schema is None:
-        query_str = "select distinct viewname from pg_views;"
-    else:
-        query_str = (
-            "select distinct viewname from pg_views where schemaname='{}';".format(
-                schema
-            )
-        )
-    df = read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
-    return df["viewname"].tolist()
-
-
 def list_matviews(
     engine,
     schema: tp.Optional[str] = None,
@@ -521,7 +477,7 @@ def list_frames(
     data = []
     for item in list_tables(engine, schema=schema):
         data.append((item, "table"))
-    for item in list_views(engine, schema=schema, nb_trials=nb_trials, logger=logger):
+    for item in list_views(engine, schema=schema):
         data.append((item, "view"))
     for item in list_matviews(
         engine, schema=schema, nb_trials=nb_trials, logger=logger
@@ -990,11 +946,9 @@ def frame_exists(
     retval: bool
         whether a table or a view exists with the given name
     """
-    if frame_name in list_tables(engine, schema=schema):
+    if table_exists(frame_name, engine, schema=schema):
         return True
-    if frame_name in list_views(
-        engine, schema=schema, nb_trials=nb_trials, logger=logger
-    ):
+    if frame_name in list_views(engine, schema=schema):
         return True
     return frame_name in list_matviews(
         engine, schema=schema, nb_trials=nb_trials, logger=logger
@@ -1041,9 +995,7 @@ def drop_frame(
             nb_trials=nb_trials,
             logger=logger,
         )
-    if frame_name in list_views(
-        engine, schema=schema, nb_trials=nb_trials, logger=logger
-    ):
+    if frame_name in list_views(engine, schema=schema):
         return drop_view(
             frame_name,
             engine,
