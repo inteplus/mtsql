@@ -507,10 +507,9 @@ def to_sql(
             **kwargs,
         )
 
-        query_str = (
-            f"ALTER TABLE {frame_sql_str} ADD PRIMARY KEY ({','.join(local_indices)});"
-        )
-        exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+        if if_exists == "replace":
+            query_str = f"ALTER TABLE {frame_sql_str} ADD PRIMARY KEY ({','.join(local_indices)});"
+            exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
     else:
         retval = run_func(
             df.to_sql,
