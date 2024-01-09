@@ -1,5 +1,6 @@
 """Base functions dealing with an SQL database."""
 
+import uuid
 import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg2 as ps
@@ -22,6 +23,7 @@ __all__ = [
     "list_tables",
     "list_views",
     "table_exists",
+    "create_temp_id_table",
 ]
 
 
@@ -43,7 +45,7 @@ def run_func(
     *args,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs
+    **kwargs,
 ):
     """Attempt to run a function a number of times to overcome OperationalError exceptions.
 
@@ -106,7 +108,7 @@ def read_sql(
     nb_trials: int = 3,
     exception_handling: str = "raise",
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs
+    **kwargs,
 ) -> pd.DataFrame:
     """Read an SQL query with a number of trials to overcome OperationalError.
 
@@ -174,7 +176,7 @@ def read_sql(
             chunksize=chunksize,
             nb_trials=nb_trials,
             logger=logger,
-            **kwargs
+            **kwargs,
         )
 
     if chunksize is None:
@@ -214,7 +216,7 @@ def read_sql_table(
     engine,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs
+    **kwargs,
 ):
     """Read an SQL table with a number of trials to overcome OperationalError.
 
@@ -240,7 +242,7 @@ def read_sql_table(
         engine,
         nb_trials=nb_trials,
         logger=logger,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -250,7 +252,7 @@ def exec_sql(
     *args,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs
+    **kwargs,
 ):
     """Execute an SQL query with a number of trials to overcome OperationalError.
 
@@ -356,3 +358,31 @@ def table_exists(
     """
 
     return sa.inspect(engine).has_table(table_name, schema=schema)
+
+
+def create_temp_id_table(l_ids: list, conn: sa.engine.Connection) -> str:
+    """Creates a temporary table to containing a list of ids.
+
+    Parameters
+    ----------
+    l_ids : list
+        list of ids to be inserted into the table
+    conn : sqlalchemy.engine.Connection
+        a connection that has been opened
+
+    Returns
+    -------
+    table_name : str
+        name of the temporary table. The table will be deleted at the end of the connection
+    """
+
+    table_name = f"tab_{uuid.uuid4().hex}"
+
+    query_str = f"CREATE TEMP TABLE {table_name}(id int);"
+    conn.execute(sa.text(query_str))
+
+    values = ",".join((f"({id})" for id in l_ids))
+    query_str = f"INSERT INTO {table_name}(id) VALUES {values};"
+    conn.execute(sa.text(query_str))
+
+    return table_name

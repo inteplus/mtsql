@@ -2004,11 +2004,9 @@ def readsync_table(
 
             if len(new_md5_df) != len(new_df):
                 if logger:
-                    logger.debug("New dataframe:\n{}".format(str(new_df)))
-                    logger.debug("Hash dataframe:\n{}".format(str(new_md5_df)))
-                msg = "Something must have gone wrong. Number of hashes {} != number of records {}.".format(
-                    len(new_md5_df), len(new_df)
-                )
+                    logger.debug(f"New dataframe:\n{str(new_df)}")
+                    logger.debug(f"Hash dataframe:\n{str(new_md5_df)}")
+                msg = f"Something must have gone wrong. Number of hashes {len(new_md5_df)} != number of records {len(new_df)}."
                 if raise_exception_upon_mismatch:
                     raise RuntimeError(msg)
                 elif logger:
@@ -2033,7 +2031,7 @@ def readsync_table(
 
         # write back
         if logger:
-            logger.debug("Saving all {} records to file...".format(len(df)))
+            logger.debug(f"Saving all {len(df)} records to file...")
         if bg_write_csv is True:
             bg = BgInvoke(pd.dfsave, df, df_filepath, index=True)
             return df, bg
