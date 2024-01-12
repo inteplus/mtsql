@@ -1,6 +1,7 @@
 """Useful modules for accessing Redshift"""
 
-from mt import tp, logg
+import sqlalchemy as sa
+from mt import tp, np, pd, logg
 
 from .base import *
 from .psql import compliance_check
@@ -19,6 +20,7 @@ __api__ = [
     "drop_matview",
     "rename_column",
     "drop_column",
+    "conform",
 ]
 
 
@@ -525,3 +527,57 @@ def to_sql(
         )
 
     return retval
+
+
+def conform(
+    df: pd.DataFrame,
+    table_decl: sa.sql.schema.Table,
+) -> pd.DataFrame:
+    """Conforms a dataframe to a declarative base so that the columns are properly represented.
+
+    The idea is so that the output dataframe can be used to upload data to a Redshift DB. Primary
+    keys and indices are ignored. But whether an integer column is nullable or not is inspected.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        input dataframe
+    table_decl : sqlalchemy.sql.schema.Table
+        the table declaration to conform to. The output columns are converted where possible to the
+        right dtype declared by the base. If you have a declarative base `x`, an instance of
+        :class:`sqlalchemy.orm.decl_api.DeclarativeMeta`, you can pass `x.__table__`.
+
+    Returns
+    -------
+    out_df : pandas.DataFrame
+       the output dataframe, where columns of the input dataframe are copied and converted properly
+    """
+
+    # extract relevant columns
+    columns = [x.name for x in table_decl.columns]
+    df = df[columns].copy()
+
+    for x in table_decl.columns:
+        if isinstance(x.type, sa.BigInteger):
+            dtype = pd.Int64Dtype() if x.nullable else np.int64
+        elif isinstance(x.type, sa.Integer):
+            dtype = pd.Int32Dtype() if x.nullable else np.int32
+        elif isinstance(x.type, sa.SmallInteger):
+            dtype = pd.Int16Dtype() if x.nullable else np.int16
+        elif isinstance(x.type, sa.String):
+            dtype = str
+        elif isinstance(x.type, sa.Float):
+            dtype = float
+        elif isinstance(x.type, sa.REAL):
+            dtype = np.float32
+        elif isinstance(x.type, sa.Boolean):
+            dtype = pd.BooleanDtype() if x.nullable else np.bool
+        elif isinstance(x.type, sa.DateTime):
+            dtype = pd.Timestamp
+        else:
+            raise NotImplementedError(
+                "Unable to conform table declaration '{table_decl.name}' column '{x.name}' with type '{type(x.type)}'."
+            )
+        df[x.name] = df[x.name].astype(dtype)
+
+    return df

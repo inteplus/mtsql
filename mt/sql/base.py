@@ -7,7 +7,6 @@ import psycopg2 as ps
 from halo import Halo
 
 from mt import tp, logg, pd, ctx
-from mt.base import deprecated_func
 
 
 __all__ = [
