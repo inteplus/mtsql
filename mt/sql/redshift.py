@@ -560,10 +560,10 @@ def conform(
     for x in table_decl.columns:
         if isinstance(x.type, sa.BigInteger):
             dtype = pd.Int64Dtype() if x.nullable else np.int64
-        elif isinstance(x.type, sa.Integer):
-            dtype = pd.Int32Dtype() if x.nullable else np.int32
         elif isinstance(x.type, sa.SmallInteger):
             dtype = pd.Int16Dtype() if x.nullable else np.int16
+        elif isinstance(x.type, sa.Integer):
+            dtype = pd.Int32Dtype() if x.nullable else np.int32
         elif isinstance(x.type, sa.String):
             dtype = str
         elif isinstance(x.type, sa.Float):
