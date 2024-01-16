@@ -566,10 +566,10 @@ def conform(
             dtype = pd.Int32Dtype() if x.nullable else np.int32
         elif isinstance(x.type, sa.String):
             dtype = str
-        elif isinstance(x.type, sa.Float):
-            dtype = float
         elif isinstance(x.type, sa.REAL):
             dtype = np.float32
+        elif isinstance(x.type, sa.Float):
+            dtype = float
         elif isinstance(x.type, sa.Boolean):
             dtype = pd.BooleanDtype() if x.nullable else np.bool
         elif isinstance(x.type, sa.DateTime):
