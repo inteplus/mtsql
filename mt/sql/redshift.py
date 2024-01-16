@@ -578,6 +578,9 @@ def conform(
             raise NotImplementedError(
                 "Unable to conform table declaration '{table_decl.name}' column '{x.name}' with type '{type(x.type)}'."
             )
-        df[x.name] = df[x.name].astype(dtype)
+        if dtype is pd.Timestamp:
+            df[x.name] = pd.to_datetime(df[x.name])
+        else:
+            df[x.name] = df[x.name].astype(dtype)
 
     return df
