@@ -16,7 +16,7 @@ setup(
         "tqdm",  # for a nice progress bar
         "psycopg2-binary",  # for psql access
         # 'mysql', # for mysql access
-        "mtbase>=4.21",  # just updating
+        "mtbase>=4.27.4",  # to have mt.halo
         "mtpandas>=1.15",  # just updating
     ],
     url="https://github.com/inteplus/mtsql",

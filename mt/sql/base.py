@@ -4,9 +4,9 @@ import uuid
 import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg2 as ps
-from halo import Halo
 
 from mt import tp, logg, pd, ctx
+from mt.halo import Halo
 
 
 __all__ = [
