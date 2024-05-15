@@ -64,15 +64,17 @@ def run_func(
     for x in range(nb_trials):
         try:
             return func(*args, **kwargs)
-        except (se.ProgrammingError, se.IntegrityError) as e:
+        except (se.ProgrammingError, se.IntegrityError):
             raise
-        except (se.DatabaseError, se.OperationalError, ps.OperationalError) as e:
+        except (
+            se.DatabaseError,
+            se.OperationalError,
+            ps.OperationalError,
+            se.InterfaceError,
+        ):
             if logger:
-                with logger.scoped_warn(
-                    "Ignored an exception raised by failed attempt {}/{} to execute `{}.{}()`".format(
-                        x + 1, nb_trials, func.__module__, func.__name__
-                    )
-                ):
+                msg = f"Ignored an exception raised by failed attempt {x+1}/{nb_trials} to execute `{func.__module__}.{func.__name__}()`"
+                with logger.scoped_warn(msg):
                     logger.warn_last_exception()
     raise RuntimeError(
         "Attempted {} times to execute `{}.{}()` but failed.".format(
