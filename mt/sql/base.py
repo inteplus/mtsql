@@ -422,8 +422,8 @@ def temp_table_find_new_id(engine: sa.engine.Engine) -> int:
 
 
 def temp_table_drop(
-    id: int,
     engine: sa.engine.Engine,
+    id: int,
 ):
     """Drops a temp table.
 
