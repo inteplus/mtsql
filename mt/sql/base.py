@@ -1,5 +1,6 @@
 """Base functions dealing with an SQL database."""
 
+import re
 import uuid
 import sqlalchemy as sa
 import sqlalchemy.exc as se
