@@ -365,7 +365,9 @@ def table_exists(
     return sa.inspect(engine).has_table(table_name, schema=schema)
 
 
-def create_temp_id_table(l_ids: list, conn: sa.engine.Connection) -> str:
+def create_temp_id_table(
+    l_ids: list, conn: sa.engine.Connection, int_type="int"
+) -> str:
     """Creates a temporary table to containing a list of ids.
 
     Parameters
@@ -374,6 +376,8 @@ def create_temp_id_table(l_ids: list, conn: sa.engine.Connection) -> str:
         list of ids to be inserted into the table
     conn : sqlalchemy.engine.Connection
         a connection that has been opened
+    int_type : str
+        an SQL string representing the int type
 
     Returns
     -------
@@ -383,7 +387,7 @@ def create_temp_id_table(l_ids: list, conn: sa.engine.Connection) -> str:
 
     table_name = f"tab_{uuid.uuid4().hex}"
 
-    query_str = f"CREATE TEMP TABLE {table_name}(id int);"
+    query_str = f"CREATE TEMP TABLE {table_name}(id {int_type});"
     conn.execute(sa.text(query_str))
 
     values = ",".join((f"({id})" for id in l_ids))
