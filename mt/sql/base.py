@@ -82,7 +82,7 @@ def run_func(
                 with logger.scoped_warn(msg):
                     logger.warn_last_exception()
     raise RuntimeError(
-        f"Attempted {nb_trials} times to execute `{func.__module__}.{}(func.__name__)` but failed."
+        f"Attempted {nb_trials} times to execute `{func.__module__}.{(func.__name__)}` but failed."
     )
 
 
