@@ -75,15 +75,14 @@ def run_func(
             se.OperationalError,
             ps.OperationalError,
             se.InterfaceError,
+            se.PendingRollbackError,
         ):
             if logger:
                 msg = f"Ignored an exception raised by failed attempt {x+1}/{nb_trials} to execute `{func.__module__}.{func.__name__}()`"
                 with logger.scoped_warn(msg):
                     logger.warn_last_exception()
     raise RuntimeError(
-        "Attempted {} times to execute `{}.{}()` but failed.".format(
-            nb_trials, func.__module__, func.__name__
-        )
+        f"Attempted {nb_trials} times to execute `{func.__module__}.{}(func.__name__)` but failed."
     )
 
 
