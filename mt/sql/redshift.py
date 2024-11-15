@@ -584,7 +584,7 @@ def conform(
                 df[x.name] = pd.to_datetime(df[x.name])
             else:
                 df[x.name] = df[x.name].astype(dtype)
-        except e:
+        except Exception as e:
             raise LogicError(
                 "Cannot convert column dtype.",
                 debug={"name": x.name, "dtype": dtype},
