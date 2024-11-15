@@ -2,6 +2,7 @@
 
 import sqlalchemy as sa
 from mt import tp, np, pd, logg
+from mt.base import LogicError
 
 from .base import *
 from .psql import compliance_check
@@ -558,29 +559,36 @@ def conform(
     df = df[columns].copy()
 
     for x in table_decl.columns:
-        if isinstance(x.type, sa.BigInteger):
-            dtype = pd.Int64Dtype() if x.nullable else np.int64
-        elif isinstance(x.type, sa.SmallInteger):
-            dtype = pd.Int16Dtype() if x.nullable else np.int16
-        elif isinstance(x.type, sa.Integer):
-            dtype = pd.Int32Dtype() if x.nullable else np.int32
-        elif isinstance(x.type, sa.String):
-            dtype = str
-        elif isinstance(x.type, sa.REAL):
-            dtype = np.float32
-        elif isinstance(x.type, sa.Float):
-            dtype = float
-        elif isinstance(x.type, sa.Boolean):
-            dtype = pd.BooleanDtype() if x.nullable else np.bool
-        elif isinstance(x.type, sa.DateTime):
-            dtype = pd.Timestamp
-        else:
-            raise NotImplementedError(
-                "Unable to conform table declaration '{table_decl.name}' column '{x.name}' with type '{type(x.type)}'."
+        try:
+            if isinstance(x.type, sa.BigInteger):
+                dtype = pd.Int64Dtype() if x.nullable else np.int64
+            elif isinstance(x.type, sa.SmallInteger):
+                dtype = pd.Int16Dtype() if x.nullable else np.int16
+            elif isinstance(x.type, sa.Integer):
+                dtype = pd.Int32Dtype() if x.nullable else np.int32
+            elif isinstance(x.type, sa.String):
+                dtype = str
+            elif isinstance(x.type, sa.REAL):
+                dtype = np.float32
+            elif isinstance(x.type, sa.Float):
+                dtype = float
+            elif isinstance(x.type, sa.Boolean):
+                dtype = pd.BooleanDtype() if x.nullable else np.bool
+            elif isinstance(x.type, sa.DateTime):
+                dtype = pd.Timestamp
+            else:
+                raise NotImplementedError(
+                    "Unable to conform table declaration '{table_decl.name}' column '{x.name}' with type '{type(x.type)}'."
+                )
+            if dtype is pd.Timestamp:
+                df[x.name] = pd.to_datetime(df[x.name])
+            else:
+                df[x.name] = df[x.name].astype(dtype)
+        except e:
+            raise LogicError(
+                "Cannot convert column dtype.",
+                debug={"name": x.name, "dtype": dtype},
+                causing_error=e,
             )
-        if dtype is pd.Timestamp:
-            df[x.name] = pd.to_datetime(df[x.name])
-        else:
-            df[x.name] = df[x.name].astype(dtype)
 
     return df
