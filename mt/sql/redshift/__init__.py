@@ -20,24 +20,8 @@ __api__ = [
 ]
 
 
-for package in ["psycopg2", "psycopg2-binary", "psycopg2cffi"]:
-    try:
-        if get_distribution(package).parsed_version < parse_version("2.5"):
-            raise ImportError("Minimum required version for psycopg2 is 2.5")
-        break
-    except DistributionNotFound:
-        pass
-
-registry.register("rs", "mt.sql.redshift.dialect", "RedshiftDialect_psycopg2")
-registry.register("rs.psycopg2", "mt.sql.redshift.dialect", "RedshiftDialect_psycopg2")
-registry.register(
-    "rs+psycopg2cffi",
-    "mt.sql.redshift.dialect",
-    "RedshiftDialect_psycopg2cffi",
-)
-
 registry.register(
     "mtsql_redshift",
     "mt.sql.redshift.dialect",
-    "RedshiftDialect_redshift_connector",
+    "RedshiftDialect",
 )

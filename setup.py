@@ -17,6 +17,7 @@ setup(
         "tzlocal",  # for getting the local timezone
         "tqdm",  # for a nice progress bar
         "psycopg[binary]",  # for psql access, and to upgrade to psycopg3
+        "redshift_connector>=2.1.5",  # for redshift access
         # 'mysql', # for mysql access
         "mtbase>=4.31.5",  # just updating
         "mtpandas>=1.16.8",  # just updating
