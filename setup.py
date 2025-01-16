@@ -10,14 +10,16 @@ setup(
     description="Extra Python modules to deal with the interaction between pandas dataframes and remote SQL servers, for Minh-Tri Pham",
     author=["Minh-Tri Pham"],
     packages=find_packages() + find_namespace_packages(include=["mt.*"]),
+    package_data={"mt.sql.redshift": "redshift-ca-bundle.crt"},
+    include_package_data=True,
     install_requires=[
         "sqlalchemy",  # for psql access
         "tzlocal",  # for getting the local timezone
         "tqdm",  # for a nice progress bar
         "psycopg[binary]",  # for psql access, and to upgrade to psycopg3
         # 'mysql', # for mysql access
-        "mtbase>=4.27.4",  # to have mt.halo
-        "mtpandas>=1.15",  # just updating
+        "mtbase>=4.31.5",  # just updating
+        "mtpandas>=1.16.8",  # just updating
     ],
     url="https://github.com/inteplus/mtsql",
     project_urls={
