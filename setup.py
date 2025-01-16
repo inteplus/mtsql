@@ -10,7 +10,7 @@ setup(
     description="Extra Python modules to deal with the interaction between pandas dataframes and remote SQL servers, for Minh-Tri Pham",
     author=["Minh-Tri Pham"],
     packages=find_packages() + find_namespace_packages(include=["mt.*"]),
-    package_data={"mt.sql.redshift": "redshift-ca-bundle.crt"},
+    package_data={"mt.sql.redshift": ["redshift-ca-bundle.crt"]},
     include_package_data=True,
     install_requires=[
         "sqlalchemy",  # for psql access
