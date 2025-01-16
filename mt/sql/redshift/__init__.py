@@ -1,4 +1,3 @@
-from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from sqlalchemy.dialects import registry  # noqa
 
 from .main import *
