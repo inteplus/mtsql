@@ -4,25 +4,8 @@ import sqlalchemy as sa
 from mt import tp, np, pd, logg
 from mt.base import LogicError
 
-from .base import *
-from .psql import compliance_check
-
-
-__api__ = [
-    "rename_schema",
-    "get_frame_length",
-    "rename_table",
-    "vacuum_table",
-    "drop_table",
-    "rename_view",
-    "drop_view",
-    "rename_matview",
-    "refresh_matview",
-    "drop_matview",
-    "rename_column",
-    "drop_column",
-    "conform",
-]
+from ..base import *
+from ..psql import compliance_check
 
 
 # ----- simple functions -----
