@@ -2,7 +2,7 @@
 
 import sqlalchemy as sa
 import re
-import psycopg2 as ps
+import psycopg as ps
 import sqlalchemy.exc as se
 from tqdm.auto import tqdm  # nice progress bar
 
@@ -1378,12 +1378,16 @@ def comparesync_table(
     """
     frame_sql_str = frame_sql(table_name, schema=schema)
 
-    with logger.scoped_debug(
-        "Comparing table: local '{}' <-> remote '{}'".format(
-            df_filepath, frame_sql_str
-        ),
-        curly=False,
-    ) if logger else ctx.nullcontext():
+    with (
+        logger.scoped_debug(
+            "Comparing table: local '{}' <-> remote '{}'".format(
+                df_filepath, frame_sql_str
+            ),
+            curly=False,
+        )
+        if logger
+        else ctx.nullcontext()
+    ):
         # make sure the folder containing the CSV file exists
         data_dir = path.dirname(df_filepath)
         path.make_dirs(data_dir)
@@ -1448,9 +1452,11 @@ def comparesync_table(
                     id_name, text, hash_name, frame_sql_str
                 )
 
-            with logger.scoped_debug(
-                "Range of '{}'".format(id_name), curly=False
-            ) if logger else ctx.nullcontext():
+            with (
+                logger.scoped_debug("Range of '{}'".format(id_name), curly=False)
+                if logger
+                else ctx.nullcontext()
+            ):
                 qsql = "SELECT min({}) AS val FROM ({}) ct_t0".format(
                     id_name, query_str
                 )
@@ -1656,10 +1662,16 @@ def writesync_table(
                 )
             engine_ro = conn_ro
     frame_sql_str = frame_sql(table_name, schema=schema)
-    with logger.scoped_debug(
-        "Writing table: local '{}' -> remote '{}'".format(df_filepath, frame_sql_str),
-        curly=False,
-    ) if logger else ctx.nullcontext():
+    with (
+        logger.scoped_debug(
+            "Writing table: local '{}' -> remote '{}'".format(
+                df_filepath, frame_sql_str
+            ),
+            curly=False,
+        )
+        if logger
+        else ctx.nullcontext()
+    ):
         (
             local_df,
             remote_md5_df,
@@ -1899,10 +1911,16 @@ def readsync_table(
         file. If no background thread is needed, None is returned.
     """
     frame_sql_str = frame_sql(table_name, schema=schema)
-    with logger.scoped_debug(
-        "Reading table: local '{}' <- remote '{}'".format(df_filepath, frame_sql_str),
-        curly=False,
-    ) if logger else ctx.nullcontext():
+    with (
+        logger.scoped_debug(
+            "Reading table: local '{}' <- remote '{}'".format(
+                df_filepath, frame_sql_str
+            ),
+            curly=False,
+        )
+        if logger
+        else ctx.nullcontext()
+    ):
         (
             local_df,
             remote_md5_df,

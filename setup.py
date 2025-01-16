@@ -14,7 +14,7 @@ setup(
         "sqlalchemy",  # for psql access
         "tzlocal",  # for getting the local timezone
         "tqdm",  # for a nice progress bar
-        "psycopg2-binary",  # for psql access
+        "psycopg[binary]",  # for psql access, and to upgrade to psycopg3
         # 'mysql', # for mysql access
         "mtbase>=4.27.4",  # to have mt.halo
         "mtpandas>=1.15",  # just updating

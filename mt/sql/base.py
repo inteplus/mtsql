@@ -4,7 +4,7 @@ import re
 import uuid
 import sqlalchemy as sa
 import sqlalchemy.exc as se
-import psycopg2 as ps
+import psycopg as ps
 
 from mt import tp, logg, pd, ctx
 from mt.halo import Halo
