@@ -37,7 +37,7 @@ registry.register(
 )
 
 registry.register(
-    "rs+redshift_connector",
+    "mtsql_redshift",
     "mt.sql.redshift.dialect",
     "RedshiftDialect_redshift_connector",
 )
