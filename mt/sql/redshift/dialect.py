@@ -749,7 +749,7 @@ class RedshiftDDLCompiler(PGDDLCompiler):
 
     def post_create_table(self, table):
         kwargs = ["diststyle", "distkey", "sortkey", "interleaved_sortkey"]
-        info = table.dialect_options["redshift"]
+        info = table.dialect_options["mtsql_redshift"]
         info = {key: info.get(key) for key in kwargs}
         return get_table_attributes(self.preparer, **info)
 
@@ -776,7 +776,7 @@ class RedshiftDDLCompiler(PGDDLCompiler):
     def _fetch_redshift_column_attributes(self, column):
         text = ""
         if sa_version >= Version("1.3.0"):
-            info = column.dialect_options["redshift"]
+            info = column.dialect_options["mtsql_redshift"]
         else:
             if not hasattr(column, "info"):
                 return text
