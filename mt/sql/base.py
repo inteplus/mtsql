@@ -365,7 +365,10 @@ def table_exists(
 
 
 def create_temp_id_table(
-    l_ids: list, conn: sa.engine.Connection, int_type="int"
+    l_ids: list,
+    conn: sa.engine.Connection,
+    int_type="int",
+    chunksize: int = 2000000,
 ) -> str:
     """Creates a temporary table to containing a list of ids.
 
@@ -377,6 +380,8 @@ def create_temp_id_table(
         a connection that has been opened
     int_type : str
         an SQL string representing the int type
+    chunksize : int
+        maximum number of ids to be inserted in each INSERT statement
 
     Returns
     -------
@@ -389,9 +394,15 @@ def create_temp_id_table(
     query_str = f"CREATE TEMP TABLE {table_name}(id {int_type});"
     conn.execute(sa.text(query_str))
 
-    values = ",".join((f"({id})" for id in l_ids))
-    query_str = f"INSERT INTO {table_name}(id) VALUES {values};"
-    conn.execute(sa.text(query_str))
+    while True:
+        l_ids2 = l_ids[:chunksize]
+        if len(l_ids2) == 0:
+            break
+
+        values = ",".join((f"({id})" for id in l_ids2))
+        query_str = f"INSERT INTO {table_name}(id) VALUES {values};"
+        conn.execute(sa.text(query_str))
+        l_ids = l_ids[chunksize:]
 
     return table_name
 
