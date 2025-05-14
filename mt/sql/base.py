@@ -368,7 +368,7 @@ def create_temp_id_table(
     l_ids: list,
     conn: sa.engine.Connection,
     int_type="int",
-    chunksize: int = 2000000,
+    chunksize: int = 1000000,
 ) -> str:
     """Creates a temporary table to containing a list of ids.
 
