@@ -28,10 +28,10 @@ ACCESS_KEY_ID_RE = re.compile("[A-Z0-9]{20}")
 SECRET_ACCESS_KEY_RE = re.compile("[A-Za-z0-9/+=]{40}")
 TOKEN_RE = re.compile("[A-Za-z0-9/+=]+")
 AWS_PARTITIONS = frozenset({"aws", "aws-cn", "aws-us-gov"})
-AWS_ACCOUNT_ID_RE = re.compile("[0-9]{12}")
-IAM_ROLE_NAME_RE = re.compile("[A-Za-z0-9+=,.@\-_]{1,64}")  # noqa
+AWS_ACCOUNT_ID_RE = re.compile(r"[0-9]{12}")
+IAM_ROLE_NAME_RE = re.compile(r"[A-Za-z0-9+=,.@\-_]{1,64}")  # noqa
 IAM_ROLE_ARN_RE = re.compile(
-    "arn:(aws|aws-cn|aws-us-gov):iam::" "[0-9]{12}:role/[A-Za-z0-9+=,.@\-_]{1,64}"
+    r"arn:(aws|aws-cn|aws-us-gov):iam::" "[0-9]{12}:role/[A-Za-z0-9+=,.@\-_]{1,64}"
 )  # noqa
 
 

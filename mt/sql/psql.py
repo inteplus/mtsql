@@ -177,9 +177,9 @@ def as_column_name(s):
     if not isinstance(s, str):
         raise ValueError("The input argument is not a string: {}".format(s))
 
-    s2 = re.sub("[^\w]", "_", s)
+    s2 = re.sub(r"[^\w]", "_", s)
     s2 = s2.lower()
-    if not re.match("^[a-z]", s2):
+    if not re.match(r"^[a-z]", s2):
         raise ValueError(
             "The first letter of the input is not an alphabet letter: '{}'->'{}'".format(
                 s, s2
