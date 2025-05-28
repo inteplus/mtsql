@@ -4,7 +4,6 @@ import re
 from collections import defaultdict, namedtuple
 from logging import getLogger
 
-import pkg_resources
 import sqlalchemy as sa
 from packaging.version import Version
 from sqlalchemy import inspect
