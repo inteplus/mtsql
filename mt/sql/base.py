@@ -6,8 +6,7 @@ import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg as ps
 
-from mt import tp, logg, pd, ctx
-from mt.halo import Halo
+from mt import tp, logg, pd, ctx, halo
 
 
 __all__ = [
@@ -27,6 +26,7 @@ __all__ = [
     "temp_table_name",
     "temp_table_find_new_id",
     "temp_table_drop",
+    "to_temp_table",
 ]
 
 
@@ -166,7 +166,7 @@ def read_sql(
 
     if chunksize is not None:
         s = "read_sql: '{}'".format(text_sql)
-        spinner = Halo(s, spinner="dots", enabled=bool(logger))
+        spinner = halo.Halo(s, spinner="dots", enabled=bool(logger))
         spinner.start()
         ts = pd.Timestamp.now()
         cnt = 0
@@ -453,3 +453,28 @@ def temp_table_drop(
     name = id if isinstance(id, str) else temp_table_name(id)
     sql = f"DROP TABLE IF EXISTS {name}"
     return engine_execute(engine, sql)
+
+
+@ctx.contextmanager
+def to_temp_table(df: pd.DataFrame, engine: sa.engine.Engine):
+    """
+    A context manager that uploads a dataframe to a temp table and cleans up the table when done.
+
+    You can use the class in a with statement to work with the temp table, whose name is returned
+    as the context manager object.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        dataframe to be uploaded to the database as a temporary table
+    engine : sqlalchemy.engine.Engine
+        engine connrecting to the database
+    """
+
+    temp_table_id = temp_table_find_new_id(engine)
+    temp_table_name = temp_table_name(temp_table_id)
+    try:
+        df.to_sql(temp_table_name, engine)
+        yield temp_table_name
+    finally:
+        temp_table_drop(engine, temp_table_id)
