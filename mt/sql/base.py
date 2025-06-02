@@ -471,10 +471,10 @@ def to_temp_table(df: pd.DataFrame, engine: sa.engine.Engine):
         engine connrecting to the database
     """
 
-    temp_table_id = temp_table_find_new_id(engine)
-    temp_table_name = temp_table_name(temp_table_id)
+    tid = temp_table_find_new_id(engine)
+    name = temp_table_name(tid)
     try:
-        df.to_sql(temp_table_name, engine)
-        yield temp_table_name
+        df.to_sql(name, engine)
+        yield name
     finally:
-        temp_table_drop(engine, temp_table_id)
+        temp_table_drop(engine, tid)
