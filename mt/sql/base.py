@@ -31,7 +31,7 @@ __all__ = [
 
 
 def frame_sql(frame_name, schema: tp.Optional[str] = None):
-    return frame_name if schema is None else "{}.{}".format(schema, frame_name)
+    return frame_name if schema is None else f"{schema}.{frame_name}"
 
 
 def indices(df):
@@ -48,26 +48,26 @@ def run_func(
     *args,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs,
+    **kwds,
 ):
     """Attempt to run a function a number of times to overcome OperationalError exceptions.
 
     Parameters
     ----------
-    func: function
+    func : function
         function to be invoked
-    args: sequence
-        arguments to be passed to the function
-    nb_trials: int
+    nb_trials : int
         number of query trials
-    logger: mt.logg.IndentedLoggerAdapter, optional
+    logger : mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
-    kwargs: dict
+    *args : iterable
+        arguments to be passed to the function
+    **kwds : dict
         keyword arguments to be passed to the function
     """
     for x in range(nb_trials):
         try:
-            return func(*args, **kwargs)
+            return func(*args, **kwds)
         except (se.ProgrammingError, se.IntegrityError):
             raise
         except (
@@ -92,10 +92,10 @@ def conn_ctx(engine):
     return ctx.nullcontext(engine)
 
 
-def engine_execute(engine, sql, *args, **kwargs):
+def engine_execute(engine, sql, *args, **kwds):
     text_sql = sa.text(sql) if isinstance(sql, str) else sql
     with conn_ctx(engine) as conn:
-        return conn.execute(text_sql, *args, **kwargs)
+        return conn.execute(text_sql, *args, **kwds)
 
 
 def trim_sql_query(sql_query: str) -> str:
@@ -112,7 +112,7 @@ def read_sql(
     nb_trials: int = 3,
     exception_handling: str = "raise",
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs,
+    **kwds,
 ) -> pd.DataFrame:
     """Read an SQL query with a number of trials to overcome OperationalError.
 
@@ -165,7 +165,7 @@ def read_sql(
     text_sql = trim_sql_query(text_sql)
 
     if chunksize is not None:
-        s = "read_sql: '{}'".format(text_sql)
+        s = f"read_sql: '{text_sql}'"
         spinner = halo.Halo(s, spinner="dots", enabled=bool(logger))
         spinner.start()
         ts = pd.Timestamp.now()
@@ -180,7 +180,7 @@ def read_sql(
             chunksize=chunksize,
             nb_trials=nb_trials,
             logger=logger,
-            **kwargs,
+            **kwds,
         )
 
     if chunksize is None:
@@ -192,24 +192,21 @@ def read_sql(
             dfs.append(df)
             cnt += len(df)
             td = (pd.Timestamp.now() - ts).total_seconds() + 0.001
-            s = "{} rows ({} rows/sec)".format(cnt, cnt / td)
+            s = f"{cnt} rows ({cnt / td} rows/sec)"
             spinner.text = s
         df = pd.concat(dfs)
-        s = "{} rows".format(cnt)
+        s = f"{cnt} rows"
         spinner.succeed(s)
     except:
-        s = "{} rows".format(cnt)
+        s = f"{cnt} rows"
         spinner.fail(s)
         if logger:
             logger.warn_last_exception()
         if exception_handling == "raise":
             raise
         if exception_handling != "warn":
-            raise ValueError(
-                "Unknown value for argument 'exception_handling': '{}'.".format(
-                    exception_handling
-                )
-            )
+            msg = f"Unknown value for argument 'exception_handling': '{exception_handling}'."
+            raise ValueError(msg)
         df = pd.concat(dfs)
 
     return df
@@ -220,7 +217,7 @@ def read_sql_table(
     engine,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs,
+    **kwds,
 ):
     """Read an SQL table with a number of trials to overcome OperationalError.
 
@@ -246,7 +243,7 @@ def read_sql_table(
         engine,
         nb_trials=nb_trials,
         logger=logger,
-        **kwargs,
+        **kwds,
     )
 
 
@@ -256,7 +253,7 @@ def exec_sql(
     *args,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs,
+    **kwds,
 ):
     """Execute an SQL query with a number of trials to overcome OperationalError.
 
@@ -280,7 +277,7 @@ def exec_sql(
     """
 
     return run_func(
-        engine_execute, engine, sql, *args, nb_trials=nb_trials, logger=logger, **kwargs
+        engine_execute, engine, sql, *args, nb_trials=nb_trials, logger=logger, **kwds
     )
 
 
