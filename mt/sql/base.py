@@ -456,7 +456,7 @@ def temp_table_drop(
 
 
 @ctx.contextmanager
-def to_temp_table(df: pd.DataFrame, engine: sa.engine.Engine):
+def to_temp_table(df: pd.DataFrame, engine: sa.engine.Engine, **kwds):
     """
     A context manager that uploads a dataframe to a temp table and cleans up the table when done.
 
@@ -469,12 +469,14 @@ def to_temp_table(df: pd.DataFrame, engine: sa.engine.Engine):
         dataframe to be uploaded to the database as a temporary table
     engine : sqlalchemy.engine.Engine
         engine connrecting to the database
+    **kwds : dict
+        other keyword arguments passed as-is to :func:`pandas.DataFrame.to_sql`
     """
 
     tid = temp_table_find_new_id(engine)
     name = temp_table_name(tid)
     try:
-        df.to_sql(name, engine)
+        df.to_sql(name, engine, **kwds)
         yield name
     finally:
         temp_table_drop(engine, tid)
