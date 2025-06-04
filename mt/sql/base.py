@@ -166,7 +166,7 @@ def read_sql(
 
     if chunksize is not None:
         s = f"read_sql: '{text_sql}'"
-        spinner = halo.Halo(s, spinner="dots", enabled=bool(logger))
+        spinner = halo.HaloAuto(s, spinner="dots", enabled=bool(logger))
         spinner.start()
         ts = pd.Timestamp.now()
         cnt = 0
