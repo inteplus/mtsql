@@ -197,7 +197,7 @@ def to_sql(
     if_exists="fail",
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs,
+    **kwds,
 ):
     """Writes records stored in a DataFrame to a PostgreSQL database.
 
@@ -222,6 +222,8 @@ def to_sql(
         number of query trials
     logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
+    **kwds : dict
+        other keyword arguments to be passed as-is to :func:`pandas.DataFrame.to_sql`
 
     Raises
     ------
@@ -241,12 +243,12 @@ def to_sql(
 
     """
 
-    if kwargs:
-        if "index" in kwargs:
+    if kwds:
+        if "index" in kwds:
             raise ValueError(
                 "The `mt.sql.psql.to_sql()` function does not accept `index` as a keyword."
             )
-        if "index_label" in kwargs:
+        if "index_label" in kwds:
             raise ValueError(
                 "This `mt.sql.psql.to_sql()` function does not accept `index_label` as a keyword."
             )
@@ -274,7 +276,7 @@ def to_sql(
                 index_label=None,
                 nb_trials=nb_trials,
                 logger=logger,
-                **kwargs,
+                **kwds,
             )
         retval = run_func(
             df.to_sql,
@@ -286,7 +288,7 @@ def to_sql(
             index_label=None,
             nb_trials=nb_trials,
             logger=logger,
-            **kwargs,
+            **kwds,
         )
         if if_exists == "replace":
             query_str = "ALTER TABLE {} ADD PRIMARY KEY ({});".format(
@@ -346,7 +348,7 @@ def to_sql(
         index_label=None,
         nb_trials=nb_trials,
         logger=logger,
-        **kwargs,
+        **kwds,
     )
 
 

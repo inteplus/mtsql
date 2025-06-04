@@ -485,7 +485,7 @@ class TIMESTAMPTZ(RedshiftTypeEngine, sa.dialects.postgresql.TIMESTAMP):
 
     def __init__(self, timezone=True, precision=None):
         # timezone param must be present as it's provided in base class so the
-        # object can be instantiated with kwargs. see
+        # object can be instantiated with kwds. see
         # :meth:`~sqlalchemy.dialects.postgresql.base.PGDialect._get_column_info`
         super(TIMESTAMPTZ, self).__init__(timezone=True, precision=precision)
 
@@ -506,7 +506,7 @@ class TIMETZ(RedshiftTypeEngine, sa.dialects.postgresql.TIME):
 
     def __init__(self, timezone=True, precision=None):
         # timezone param must be present as it's provided in base class so the
-        # object can be instantiated with kwargs. see
+        # object can be instantiated with kwds. see
         # :meth:`~sqlalchemy.dialects.postgresql.base.PGDialect._get_column_info`
         super(TIMETZ, self).__init__(timezone=True, precision=precision)
 
@@ -747,12 +747,12 @@ class RedshiftDDLCompiler(PGDDLCompiler):
     """
 
     def post_create_table(self, table):
-        kwargs = ["diststyle", "distkey", "sortkey", "interleaved_sortkey"]
+        kwds = ["diststyle", "distkey", "sortkey", "interleaved_sortkey"]
         info = table.dialect_options["mtsql_redshift"]
-        info = {key: info.get(key) for key in kwargs}
+        info = {key: info.get(key) for key in kwds}
         return get_table_attributes(self.preparer, **info)
 
-    def get_column_specification(self, column, **kwargs):
+    def get_column_specification(self, column, **kwds):
         colspec = self.preparer.format_column(column)
 
         colspec += " " + self.dialect.type_compiler.process(column.type)
@@ -1156,8 +1156,8 @@ class RedshiftDialectMixin(DefaultDialect):
                 relation_names.append(key.name)
         return relation_names
 
-    def _get_column_info(self, *args, **kwargs):
-        kw = kwargs.copy()
+    def _get_column_info(self, *args, **kwds):
+        kw = kwds.copy()
         encode = kw.pop("encode", None)
         if sa_version >= Version("1.3.16"):
             # SQLAlchemy 1.3.16 introduced generated columns,
@@ -1422,8 +1422,8 @@ class RedshiftDialect(RedshiftDialectMixin, PGDialect):
     supports_statement_cache = False
     use_setinputsizes = False  # not implemented in redshift_connector
 
-    def __init__(self, client_encoding=None, **kwargs):
-        super(RedshiftDialect, self).__init__(client_encoding=client_encoding, **kwargs)
+    def __init__(self, client_encoding=None, **kwds):
+        super(RedshiftDialect, self).__init__(client_encoding=client_encoding, **kwds)
         self.client_encoding = client_encoding
 
     @classmethod
@@ -1523,7 +1523,7 @@ class RedshiftDialect(RedshiftDialectMixin, PGDialect):
         else:
             return None
 
-    def create_connect_args(self, *args, **kwargs):
+    def create_connect_args(self, *args, **kwds):
         """
         Build DB-API compatible connection arguments.
 
@@ -1536,7 +1536,7 @@ class RedshiftDialect(RedshiftDialectMixin, PGDialect):
             "application_name": "sqlalchemy-redshift",
         }
         cargs, cparams = super(RedshiftDialectMixin, self).create_connect_args(
-            *args, **kwargs
+            *args, **kwds
         )
         # set client_encoding so it is picked up by on_connect(), as
         # redshift_connector does not have client_encoding connection parameter
@@ -1570,7 +1570,7 @@ def gen_columns_from_children(root):
 
 
 @compiles(Delete, "redshift")
-def visit_delete_stmt(element, compiler, **kwargs):
+def visit_delete_stmt(element, compiler, **kwds):
     """
     Adds redshift-dialect specific compilation rule for the
     delete statement.
@@ -1635,25 +1635,25 @@ def visit_delete_stmt(element, compiler, **kwargs):
     # note:
     #   the tables in the using clause are sorted in the order in
     #   which they first appear in the where clause.
-    delete_stmt_table = compiler.process(element.table, asfrom=True, **kwargs)
+    delete_stmt_table = compiler.process(element.table, asfrom=True, **kwds)
 
     if sa_version >= Version("1.4.0"):
         if element.whereclause is not None:
-            clause = compiler.process(element.whereclause, **kwargs)
+            clause = compiler.process(element.whereclause, **kwds)
             if clause:
                 whereclause = " WHERE {clause}".format(clause=clause)
     else:
         whereclause_tuple = element.get_children()
         if whereclause_tuple:
             whereclause = " WHERE {clause}".format(
-                clause=compiler.process(*whereclause_tuple, **kwargs)
+                clause=compiler.process(*whereclause_tuple, **kwds)
             )
 
     if whereclause:
         usingclause_tables = []
         whereclause_columns = gen_columns_from_children(element)
         for col in whereclause_columns:
-            table = compiler.process(col.table, asfrom=True, **kwargs)
+            table = compiler.process(col.table, asfrom=True, **kwds)
             if table != delete_stmt_table and table not in usingclause_tables:
                 usingclause_tables.append(table)
         if usingclause_tables:

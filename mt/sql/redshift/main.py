@@ -418,7 +418,7 @@ def to_sql(
     if_exists="fail",
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
-    **kwargs,
+    **kwds,
 ):
     """Writes records stored in a DataFrame to a Redshift database.
 
@@ -440,7 +440,7 @@ def to_sql(
         number of query trials
     logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
-    kwargs : dict
+    **kwds : dict
         keyword arguments passed as-is to :func:`pandas.DataFrame.to_sql`
 
     Raises
@@ -460,12 +460,12 @@ def to_sql(
 
     """
 
-    if kwargs:
-        if "index" in kwargs:
+    if kwds:
+        if "index" in kwds:
             raise ValueError(
                 "The `mt.sql.psql.to_sql()` function does not accept `index` as a keyword."
             )
-        if "index_label" in kwargs:
+        if "index_label" in kwds:
             raise ValueError(
                 "This `mt.sql.psql.to_sql()` function does not accept `index_label` as a keyword."
             )
@@ -490,7 +490,7 @@ def to_sql(
             index_label=None,
             nb_trials=nb_trials,
             logger=logger,
-            **kwargs,
+            **kwds,
         )
 
         if if_exists == "replace":
@@ -507,7 +507,7 @@ def to_sql(
             index_label=None,
             nb_trials=nb_trials,
             logger=logger,
-            **kwargs,
+            **kwds,
         )
 
     return retval
