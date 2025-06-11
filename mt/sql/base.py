@@ -77,13 +77,15 @@ def run_func(
             se.InterfaceError,
             se.PendingRollbackError,
         ):
-            if logger:
-                msg = f"Ignored an exception raised by failed attempt {x+1}/{nb_trials} to execute `{func.__module__}.{func.__name__}()`"
-                with logger.scoped_warn(msg):
-                    logger.warn_last_exception()
-    raise RuntimeError(
-        f"Attempted {nb_trials} times to execute `{func.__module__}.{func.__name__}` but failed."
-    )
+            if x < nb_trials - 1:
+                if logger:
+                    msg = f"Ignored an exception raised by failed attempt {x+1}/{nb_trials} to execute `{func.__module__}.{func.__name__}()`"
+                    with logger.scoped_warn(msg):
+                        logger.warn_last_exception()
+            else:
+                msg = f"Attempted {nb_trials} times to execute `{func.__module__}.{func.__name__}` but failed."
+                logg.error(msg, logger=logger)
+                raise
 
 
 def conn_ctx(engine):
