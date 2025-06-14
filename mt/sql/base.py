@@ -146,7 +146,7 @@ def read_sql(
         warning ('warn') and return whatever has been downloaded.
     logger: mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
-    kwargs: dict
+    **kwds: dict
         other keyword arguments to be passed directly to :func:`pandas.read_sql_query`
 
     Returns
@@ -391,7 +391,7 @@ def create_temp_id_table(
     table_name = f"tab_{uuid.uuid4().hex}"
 
     query_str = f"CREATE TEMP TABLE {table_name}(id {int_type});"
-    exec_sql(conn, sa.text(query_str))
+    exec_sql(sa.text(query_str), conn)
 
     while True:
         l_ids2 = l_ids[:chunksize]
@@ -400,7 +400,7 @@ def create_temp_id_table(
 
         values = ",".join((f"({id})" for id in l_ids2))
         query_str = f"INSERT INTO {table_name}(id) VALUES {values};"
-        exec_sql(conn, sa.text(query_str))
+        exec_sql(sa.text(query_str), conn)
         l_ids = l_ids[chunksize:]
 
     return table_name
@@ -451,7 +451,7 @@ def temp_table_drop(
 
     name = id if isinstance(id, str) else temp_table_name(id)
     sql = f"DROP TABLE IF EXISTS {name}"
-    return engine_execute(engine, sql)
+    return exec_sql(sql, engine)
 
 
 @ctx.contextmanager
