@@ -391,7 +391,7 @@ def create_temp_id_table(
     table_name = f"tab_{uuid.uuid4().hex}"
 
     query_str = f"CREATE TEMP TABLE {table_name}(id {int_type});"
-    conn.execute(sa.text(query_str))
+    exec_sql(conn, sa.text(query_str))
 
     while True:
         l_ids2 = l_ids[:chunksize]
@@ -400,7 +400,7 @@ def create_temp_id_table(
 
         values = ",".join((f"({id})" for id in l_ids2))
         query_str = f"INSERT INTO {table_name}(id) VALUES {values};"
-        conn.execute(sa.text(query_str))
+        exec_sql(conn, sa.text(query_str))
         l_ids = l_ids[chunksize:]
 
     return table_name
