@@ -5,6 +5,7 @@ import uuid
 import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg as ps
+import ssl
 
 from mt import tp, logg, pd, ctx, halo
 
@@ -76,6 +77,7 @@ def run_func(
             ps.OperationalError,
             se.InterfaceError,
             se.PendingRollbackError,
+            ssl.SSLEOFError,
         ):
             if x < nb_trials - 1:
                 if logger:
