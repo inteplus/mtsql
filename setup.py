@@ -19,8 +19,8 @@ setup(
         "psycopg[binary]",  # for psql access, and to upgrade to psycopg3
         "redshift_connector>=2.1.5",  # for redshift access
         # 'mysql', # for mysql access
-        "mtbase>=4.32.25",  # to have HaloAuto
-        "mtpandas>=1.17.10",  # just updating
+        "mtbase>=4.32.27",  # to have HaloAuto
+        "mtpandas>=1.17.13",  # just updating
     ],
     url="https://github.com/inteplus/mtsql",
     project_urls={
