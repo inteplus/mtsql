@@ -76,6 +76,7 @@ def run_func(
             se.InterfaceError,
             se.PendingRollbackError,
             ssl.SSLEOFError,
+            ssl.SSLZeroReturnError,
         ):
             if x < nb_trials - 1:
                 if logger:
