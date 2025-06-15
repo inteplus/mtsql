@@ -69,8 +69,6 @@ def run_func(
     for x in range(nb_trials):
         try:
             return func(*args, **kwds)
-        except (se.ProgrammingError, se.IntegrityError):
-            raise
         except (
             se.DatabaseError,
             se.OperationalError,
@@ -88,6 +86,8 @@ def run_func(
                 msg = f"Attempted {nb_trials} times to execute `{func.__module__}.{func.__name__}` but failed."
                 logg.error(msg, logger=logger)
                 raise
+        except (se.ProgrammingError, se.IntegrityError):
+            raise
 
 
 def conn_ctx(engine):
