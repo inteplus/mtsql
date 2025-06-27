@@ -640,7 +640,7 @@ def rename_table(
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
-    """Renames a table of a schema.
+    """Renames a (foreign) table of a schema.
 
     Parameters
     ----------
@@ -653,7 +653,7 @@ def rename_table(
     schema : str or None
         a valid schema name returned from `list_schemas()`
     foreign : bool
-        whether the table to rename to is a foreign table
+        whether the table to rename is a foreign table
     nb_trials : int
         number of query trials
     logger : mt.logg.IndentedLoggerAdapter, optional
@@ -717,21 +717,24 @@ def drop_table(
     table_name,
     engine,
     schema: tp.Optional[str] = None,
-    restrict=True,
+    foreign: bool = False,
+    restrict: bool = True,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
-    """Drops a table if it exists, with restrict or cascade options.
+    """Drops a (foreign) table if it exists, with restrict or cascade options.
 
     Parameters
     ----------
     table_name : str
         table name
-    engine: sqlalchemy.engine.Engine
+    engine : sqlalchemy.engine.Engine
         an sqlalchemy connection engine created by function `create_engine()`
-    schema: str or None
+    schema : str or None
         a valid schema name returned from `list_schemas()`
-    restrict: bool
+    foreign : bool
+        whether the table to drop is a foreign table
+    restrict : bool
         If True, refuses to drop table if there is any object depending on it. Otherwise it is the
         'cascade' option which allows you to remove those dependent objects together with the table
         automatically.
@@ -745,9 +748,11 @@ def drop_table(
     whatever exec_sql() returns
     """
     frame_sql_str = frame_sql(table_name, schema=schema)
-    query_str = "DROP TABLE IF EXISTS {} {};".format(
-        frame_sql_str, "RESTRICT" if restrict else "CASCADE"
-    )
+    if foreign:
+        query_str = "DROP FOREIGN TABLE "
+    else:
+        query_str = "DROP TABLE "
+    query_str += f'IF EXISTS {frame_sql_str} {"RESTRICT" if restrict else "CASCADE"};'
     return exec_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
 
 
