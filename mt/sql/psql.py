@@ -636,6 +636,7 @@ def rename_table(
     new_table_name,
     engine,
     schema: tp.Optional[str] = None,
+    foreign: bool = False,
     nb_trials: int = 3,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
@@ -643,17 +644,19 @@ def rename_table(
 
     Parameters
     ----------
-    old_table_name: str
+    old_table_name : str
         old table name
-    new_table_name: str
+    new_table_name : str
         new table name
-    engine: sqlalchemy.engine.Engine
+    engine : sqlalchemy.engine.Engine
         an sqlalchemy connection engine created by function `create_engine()`
-    schema: str or None
+    schema : str or None
         a valid schema name returned from `list_schemas()`
-    nb_trials: int
+    foreign : bool
+        whether the table to rename to is a foreign table
+    nb_trials : int
         number of query trials
-    logger: mt.logg.IndentedLoggerAdapter, optional
+    logger : mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
 
     Returns
@@ -661,8 +664,12 @@ def rename_table(
     whatever exec_sql() returns
     """
     frame_sql_str = frame_sql(old_table_name, schema=schema)
+    if foreign:
+        query_str = f'ALTER FOREIGN TABLE {frame_sql_str} RENAME TO "{new_table_name}";'
+    else:
+        query_str = f'ALTER TABLE {frame_sql_str} RENAME TO "{new_table_name}";'
     return exec_sql(
-        'ALTER TABLE {} RENAME TO "{}";'.format(frame_sql_str, new_table_name),
+        query_str,
         engine,
         nb_trials=nb_trials,
         logger=logger,
