@@ -6,6 +6,7 @@ import sqlalchemy as sa
 import sqlalchemy.exc as se
 import psycopg as ps
 import ssl
+import time
 
 from mt import tp, logg, pd, ctx, halo
 
@@ -77,12 +78,16 @@ def run_func(
             se.PendingRollbackError,
             ssl.SSLEOFError,
             ssl.SSLZeroReturnError,
-        ):
+        ) as e:
             if x < nb_trials - 1:
                 if logger:
                     msg = f"Ignored an exception raised by failed attempt {x+1}/{nb_trials} to execute `{func.__module__}.{func.__name__}()`"
                     with logger.scoped_warn(msg):
                         logger.warn_last_exception()
+                if isinstance(e, se.PendingRollbackError):
+                    time.sleep(60)
+                elif isinstance(e, ssl.SSLEOFError):
+                    time.sleep(3)
             else:
                 msg = f"Attempted {nb_trials} times to execute `{func.__module__}.{func.__name__}` but failed."
                 logg.error(msg, logger=logger)
