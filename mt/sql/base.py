@@ -75,6 +75,7 @@ def run_func(
             se.OperationalError,
             ps.OperationalError,
             se.InterfaceError,
+            se.InternalError,
             se.PendingRollbackError,
             ssl.SSLEOFError,
             ssl.SSLZeroReturnError,
