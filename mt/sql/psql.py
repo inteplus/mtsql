@@ -36,6 +36,7 @@ __all__ = [
     "refresh_matview",
     "drop_matview",
     "frame_exists",
+    "count_estimate",
     "drop_frame",
     "list_columns_ext",
     "list_columns",
@@ -967,6 +968,39 @@ def frame_exists(
     return frame_name in list_matviews(
         engine, schema=schema, nb_trials=nb_trials, logger=logger
     )
+
+
+def count_estimate(
+    frame_name,
+    engine,
+    schema: tp.Optional[str] = None,
+    nb_trials: int = 3,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+):
+    """Gives an estimate of the number of rows of a frame.
+
+    Parameters
+    ----------
+    frame_name: str
+        name of table or view
+    engine: sqlalchemy.engine.Engine
+        an sqlalchemy connection engine created by function `create_engine()`
+    schema: str or None
+        a valid schema name returned from `list_schemas()`
+    nb_trials: int
+        number of query trials
+    logger: mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+
+    Returns
+    -------
+    retval: int
+        the estimated number of rows
+    """
+    frame_sql_str = frame_sql(frame_name, schema=schema)
+    query_str = f"SELECT reltuples::bigint FROM pg_class WHERE oid = '{frame_sql_str}'::regclass;"
+    df = read_sql(query_str, engine, nb_trials=nb_trials, logger=logger)
+    return df.iloc[0]["reltuples"]
 
 
 def drop_frame(
