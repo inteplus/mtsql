@@ -8,7 +8,7 @@ VERSION_FILE = os.path.join(os.path.dirname(__file__), "VERSION.txt")
 setup(
     name="mtsql",
     description="Extra Python modules to deal with the interaction between pandas dataframes and remote SQL servers, for Minh-Tri Pham",
-    author=["Minh-Tri Pham"],
+    author="Minh-Tri Pham",
     packages=find_packages() + find_namespace_packages(include=["mt.*"]),
     package_data={"mt.sql.redshift": ["redshift-ca-bundle.crt"]},
     include_package_data=True,
@@ -19,7 +19,7 @@ setup(
         "psycopg[binary]",  # for psql access, and to upgrade to psycopg3
         "redshift_connector>=2.1.5",  # for redshift access
         # 'mysql', # for mysql access
-        "mtbase>=4.32.34",  # to have HaloAuto
+        "mtbase>=4.3.2",  # just updating
         "mtpandas>=1.17.16",  # just updating
     ],
     url="https://github.com/inteplus/mtsql",

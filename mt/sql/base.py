@@ -30,6 +30,7 @@ __all__ = [
     "temp_table_drop",
     "to_temp_table",
     "find_common_ids",
+    "remove_records_by_id",
 ]
 
 
@@ -544,3 +545,43 @@ def find_common_ids(
         l_commonIds = df_common["id"].tolist()
 
     return l_commonIds
+
+
+def remove_records_by_id(
+    l_ids: tp.List[int],
+    frame_name: str,
+    engine: sa.engine.Engine,
+    schema: tp.Optional[str] = None,
+    id_col: str = "id",
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+):
+    """Removes records from a frame by a list of ids.
+
+    Parameters
+    ----------
+    l_ids : list of int
+        list of ids to be removed
+    frame_name : str
+        name of the frame to be modified
+    engine : sqlalchemy.engine.Engine
+        connection engine to the server
+    schema : str, optional
+        schema of the frame. If None, the default schema is used.
+    id_col : str
+        name of the id column in the frame
+    logger : mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+    """
+
+    with conn_ctx(engine) as conn:
+        temp_table = create_temp_id_table(l_ids, conn, logger=logger)
+
+        full_frame_name = frame_sql(frame_name, schema=schema)
+
+        sql = f"""
+        DELETE FROM {full_frame_name}
+        USING {temp_table} AS t
+        WHERE {full_frame_name}.{id_col} = t.id;
+        """
+
+        exec_sql(sql, conn, logger=logger)
