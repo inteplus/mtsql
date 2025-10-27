@@ -377,7 +377,7 @@ def table_exists(
 def create_temp_id_table(
     l_ids: list,
     conn: sa.engine.Connection,
-    int_type="int",
+    int_type: str = "int",
     chunksize: int = 1000000,
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ) -> str:
@@ -504,6 +504,7 @@ def find_common_ids(
     engine: sa.engine.Engine,
     schema: tp.Optional[str] = None,
     id_col: str = "id",
+    int_type: str = "int",
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ) -> tp.List[int]:
     """Finds common ids between a list of ids and the ids in a given frame.
@@ -520,6 +521,8 @@ def find_common_ids(
         schema of the frame. If None, the default schema is used.
     id_col : str
         name of the id column in the frame
+    int_type : str
+        an SQL string representing the int type of the id column
     logger : mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
 
@@ -530,7 +533,7 @@ def find_common_ids(
     """
 
     with conn_ctx(engine) as conn:
-        temp_table = create_temp_id_table(l_ids, conn, logger=logger)
+        temp_table = create_temp_id_table(l_ids, conn, int_type=int_type, logger=logger)
 
         full_frame_name = frame_sql(frame_name, schema=schema)
 
@@ -553,6 +556,7 @@ def remove_records_by_id(
     engine: sa.engine.Engine,
     schema: tp.Optional[str] = None,
     id_col: str = "id",
+    int_type: str = "int",
     logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
 ):
     """Removes records from a frame by a list of ids.
@@ -569,12 +573,14 @@ def remove_records_by_id(
         schema of the frame. If None, the default schema is used.
     id_col : str
         name of the id column in the frame
+    int_type : str
+        an SQL string representing the int type of the id column
     logger : mt.logg.IndentedLoggerAdapter, optional
         logger for debugging
     """
 
     with conn_ctx(engine) as conn:
-        temp_table = create_temp_id_table(l_ids, conn, logger=logger)
+        temp_table = create_temp_id_table(l_ids, conn, int_type=int_type, logger=logger)
 
         full_frame_name = frame_sql(frame_name, schema=schema)
 
