@@ -25,12 +25,15 @@ __all__ = [
     "list_views",
     "table_exists",
     "create_temp_id_table",
+    "create_temp_str_id_table",
     "temp_table_name",
     "temp_table_find_new_id",
     "temp_table_drop",
     "to_temp_table",
     "find_common_ids",
+    "find_common_str_ids",
     "remove_records_by_id",
+    "remove_records_by_str_id",
 ]
 
 
@@ -420,6 +423,49 @@ def create_temp_id_table(
     return table_name
 
 
+def create_temp_str_id_table(
+    l_ids: list,
+    conn: sa.engine.Connection,
+    chunksize: int = 1000000,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+) -> str:
+    """Creates a temporary table to containing a list of string ids.
+
+    Parameters
+    ----------
+    l_ids : list
+        list of string ids to be inserted into the table
+    conn : sqlalchemy.engine.Connection
+        a connection that has been opened
+    chunksize : int
+        maximum number of ids to be inserted in each INSERT statement
+    logger : mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+
+    Returns
+    -------
+    table_name : str
+        name of the temporary table. The table will be deleted at the end of the connection
+    """
+
+    table_name = f"tab_{uuid.uuid4().hex}"
+
+    query_str = f"CREATE TEMP TABLE {table_name}(id character varying);"
+    exec_sql(sa.text(query_str), conn, logger=logger)
+
+    while True:
+        l_ids2 = l_ids[:chunksize]
+        if len(l_ids2) == 0:
+            break
+
+        values = ",".join((f"('{id}')" for id in l_ids2))
+        query_str = f"INSERT INTO {table_name}(id) VALUES {values};"
+        exec_sql(sa.text(query_str), conn, logger=logger)
+        l_ids = l_ids[chunksize:]
+
+    return table_name
+
+
 def temp_table_name(id: int) -> str:
     """Converts a temp table id into a temp table name."""
     return f"mttmp_{id}"
@@ -550,6 +596,55 @@ def find_common_ids(
     return l_commonIds
 
 
+def find_common_str_ids(
+    l_ids: tp.List[str],
+    frame_name: str,
+    engine: sa.engine.Engine,
+    schema: tp.Optional[str] = None,
+    id_col: str = "uuid",
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+) -> tp.List[int]:
+    """Finds common string ids between a list of string ids and the string ids in a given frame.
+
+    Parameters
+    ----------
+    l_ids : list of strings
+        list of string ids to be checked
+    frame_name : str
+        name of the frame to be checked against
+    engine : sqlalchemy.engine.Engine
+        connection engine to the server
+    schema : str, optional
+        schema of the frame. If None, the default schema is used.
+    id_col : str
+        name of the string id column in the frame
+    logger : mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+
+    Returns
+    -------
+    list of strings
+        list of common string ids
+    """
+
+    with conn_ctx(engine) as conn:
+        temp_table = create_temp_str_id_table(l_ids, conn, logger=logger)
+
+        full_frame_name = frame_sql(frame_name, schema=schema)
+
+        sql = f"""
+        SELECT t.id FROM {temp_table} AS t
+        INNER JOIN {full_frame_name} AS f
+        ON t.id = f.{id_col};
+        """
+
+        df_common = read_sql(sql, conn, index_col=None, logger=logger)
+
+        l_commonIds = df_common["id"].tolist()
+
+    return l_commonIds
+
+
 def remove_records_by_id(
     l_ids: tp.List[int],
     frame_name: str,
@@ -581,6 +676,46 @@ def remove_records_by_id(
 
     with conn_ctx(engine) as conn:
         temp_table = create_temp_id_table(l_ids, conn, int_type=int_type, logger=logger)
+
+        full_frame_name = frame_sql(frame_name, schema=schema)
+
+        sql = f"""
+        DELETE FROM {full_frame_name}
+        USING {temp_table} AS t
+        WHERE {full_frame_name}.{id_col} = t.id;
+        """
+
+        exec_sql(sql, conn, logger=logger)
+
+
+def remove_records_by_str_id(
+    l_ids: tp.List[str],
+    frame_name: str,
+    engine: sa.engine.Engine,
+    schema: tp.Optional[str] = None,
+    id_col: str = "id",
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+):
+    """Removes records from a frame by a list of string ids.
+
+    Parameters
+    ----------
+    l_ids : list of strings
+        list of string ids to be removed
+    frame_name : str
+        name of the frame to be modified
+    engine : sqlalchemy.engine.Engine
+        connection engine to the server
+    schema : str, optional
+        schema of the frame. If None, the default schema is used.
+    id_col : str
+        name of the id column in the frame
+    logger : mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+    """
+
+    with conn_ctx(engine) as conn:
+        temp_table = create_temp_str_id_table(l_ids, conn, logger=logger)
 
         full_frame_name = frame_sql(frame_name, schema=schema)
 
