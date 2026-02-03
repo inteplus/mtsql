@@ -25,12 +25,14 @@ __all__ = [
     "list_views",
     "table_exists",
     "create_temp_id_table",
+    "create_temp_id_tuple_table",
     "create_temp_str_id_table",
     "temp_table_name",
     "temp_table_find_new_id",
     "temp_table_drop",
     "to_temp_table",
     "find_common_ids",
+    "find_common_id_tuples",
     "find_common_str_ids",
     "remove_records_by_id",
     "remove_records_by_str_id",
@@ -423,6 +425,65 @@ def create_temp_id_table(
     return table_name
 
 
+def create_temp_id_tuple_table(
+    la_ids: list,
+    n_cols: int,
+    conn: sa.engine.Connection,
+    int_type: str = "int",
+    chunksize: int = 1000000,
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+) -> str:
+    """Creates a temporary table to containing a list of multi-column ids.
+
+    Parameters
+    ----------
+    la_ids : list
+        list of fixed-sized arrays of ids to be inserted into the table. Each array must have
+        length equal to `n_cols`.
+    n_cols : int
+        number of columns in the id arrays
+    conn : sqlalchemy.engine.Connection
+        a connection that has been opened
+    int_type : str
+        an SQL string representing the int type
+    chunksize : int
+        maximum number of ids to be inserted in each INSERT statement
+    logger : mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+
+    Returns
+    -------
+    table_name : str
+        name of the temporary table. The table will be deleted at the end of the connection
+    """
+
+    if n_cols <= 1:
+        raise ValueError("n_cols must be greater than 1")
+
+    table_name = f"tab_{uuid.uuid4().hex}"
+
+    query_str = f"CREATE TEMP TABLE {table_name}("
+    query_str += ",".join((f"id{i+1} {int_type}" for i in range(n_cols)))
+    query_str += ");"
+    exec_sql(sa.text(query_str), conn, logger=logger)
+
+    while True:
+        la_ids2 = la_ids[:chunksize]
+        if len(la_ids2) == 0:
+            break
+        values = ",".join(
+            "(" + ",".join((str(id[i]) for i in range(n_cols))) + ")" for id in la_ids2
+        )
+        query_str = f"INSERT INTO {table_name}("
+        query_str += ",".join((f"id{i+1}" for i in range(n_cols)))
+        query_str += f") VALUES {values};"
+        exec_sql(sa.text(query_str), conn, logger=logger)
+
+        la_ids = la_ids[chunksize:]
+
+    return table_name
+
+
 def create_temp_str_id_table(
     l_ids: list,
     conn: sa.engine.Connection,
@@ -566,6 +627,60 @@ def find_common_ids(
     schema : str, optional
         schema of the frame. If None, the default schema is used.
     id_col : str
+        name of the id column in the frame
+    int_type : str
+        an SQL string representing the int type of the id column
+    logger : mt.logg.IndentedLoggerAdapter, optional
+        logger for debugging
+
+    Returns
+    -------
+    list of int
+        list of common ids
+    """
+
+    with conn_ctx(engine) as conn:
+        temp_table = create_temp_id_table(l_ids, conn, int_type=int_type, logger=logger)
+
+        full_frame_name = frame_sql(frame_name, schema=schema)
+
+        sql = f"""
+        SELECT t.id FROM {temp_table} AS t
+        INNER JOIN {full_frame_name} AS f
+        ON t.id = f.{id_col};
+        """
+
+        df_common = read_sql(sql, conn, index_col=None, logger=logger)
+
+        l_commonIds = df_common["id"].tolist()
+
+    return l_commonIds
+
+
+def find_common_id_tuples(
+    la_ids: tp.List[tp.List[int]],
+    id_cols: tp.List[str],
+    frame_name: str,
+    engine: sa.engine.Engine,
+    schema: tp.Optional[str] = None,
+    int_type: str = "int",
+    logger: tp.Optional[logg.IndentedLoggerAdapter] = None,
+) -> tp.List[int]:
+    """Finds common ids between a list of ids and the ids in a given frame.
+
+    Parameters
+    ----------
+    la_ids : list of list of int
+        list of id tuples to be checked
+    id_cols : list of str
+        name of the id columns in the frame
+    frame_name : str
+        name of the frame to be checked against
+    engine : sqlalchemy.engine.Engine
+        connection engine to the server
+    schema : str, optional
+        schema of the frame. If None, the default schema is used.
+    id_cols : list of str
         name of the id column in the frame
     int_type : str
         an SQL string representing the int type of the id column
