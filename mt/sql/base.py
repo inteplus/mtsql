@@ -659,7 +659,7 @@ def find_common_ids(
 
 def find_common_id_tuples(
     la_ids: tp.List[tp.List[int]],
-    id_cols: tp.List[str],
+    l_idCols: tp.List[str],
     frame_name: str,
     engine: sa.engine.Engine,
     schema: tp.Optional[str] = None,
@@ -672,7 +672,7 @@ def find_common_id_tuples(
     ----------
     la_ids : list of list of int
         list of id tuples to be checked
-    id_cols : list of str
+    l_idCols : list of str
         name of the id columns in the frame
     frame_name : str
         name of the frame to be checked against
@@ -680,7 +680,7 @@ def find_common_id_tuples(
         connection engine to the server
     schema : str, optional
         schema of the frame. If None, the default schema is used.
-    id_cols : list of str
+    l_idCols : list of str
         name of the id column in the frame
     int_type : str
         an SQL string representing the int type of the id column
@@ -689,26 +689,30 @@ def find_common_id_tuples(
 
     Returns
     -------
-    list of int
-        list of common ids
+    list of list of int
+        list of cpommon id tuples
     """
 
     with conn_ctx(engine) as conn:
-        temp_table = create_temp_id_table(l_ids, conn, int_type=int_type, logger=logger)
+        temp_table = create_temp_id_tuple_table(
+            la_ids, conn, int_type=int_type, logger=logger
+        )
 
         full_frame_name = frame_sql(frame_name, schema=schema)
 
-        sql = f"""
-        SELECT t.id FROM {temp_table} AS t
-        INNER JOIN {full_frame_name} AS f
-        ON t.id = f.{id_col};
-        """
+        sql = "SELECT t.id1"
+        for i in range(1, len(l_idCols)):
+            sql += f", t.id{i+1}"
+        sql += f" FROM {temp_table} AS t INNER JOIN {full_frame_name} AS f ON "
+        sql += " AND ".join(
+            (f"t.id{i+1} = f.{l_idCols[i]}" for i in range(len(l_idCols)))
+        )
+        sql += ";"
 
         df_common = read_sql(sql, conn, index_col=None, logger=logger)
+        la_commonIds = df_common.to_numpy()
 
-        l_commonIds = df_common["id"].tolist()
-
-    return l_commonIds
+    return la_commonIds
 
 
 def find_common_str_ids(
