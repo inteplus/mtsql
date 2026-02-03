@@ -299,6 +299,36 @@ def exec_sql(
     )
 
 
+# ----- functions dealing with id tuples -----
+
+
+def id_tuple2sql(a_ids: list, int_type: str = "int") -> str:
+    """Converts an id tuple list into an SQL string representing the tuple list.
+
+    Parameters
+    ----------
+    a_ids : list
+        list of fixed-sized arrays of ids
+    int_type : str
+        an SQL string representing the int type
+
+    Returns
+    -------
+    str
+        SQL string representing the tuple list
+    """
+    n = len(a_ids)
+    if n < 2:
+        raise ValueError("a_ids must have at least 2 elements")
+
+    if int_type == "bigint":
+        values = ",".join((str(x) for x in a_ids))
+    else:
+        values = ",".join((str(int(x)) for x in a_ids))
+
+    return f"({values})"
+
+
 # ----- functions navigating the database -----
 
 
